@@ -11,7 +11,8 @@ interface AuthState {
   isLoading: boolean;
   isInitialized: boolean;
   
-  initialize: () => Promise<void>;
+  initialize: () => Promise<() => void>;
+  fetchUserData: (userId: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, name: string, phone?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -102,10 +103,3 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   hasRole: (role) => get().roles.includes(role),
 }));
-
-// Add fetchUserData to the store type
-declare module 'zustand' {
-  interface AuthState {
-    fetchUserData: (userId: string) => Promise<void>;
-  }
-}
