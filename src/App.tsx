@@ -13,6 +13,7 @@ import Book from "./pages/Book";
 import UserDashboard from "./pages/UserDashboard";
 import ClinicDashboard from "./pages/ClinicDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import ClinicRegistration from "./pages/ClinicRegistration";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/register-clinic" element={<ClinicRegistration />} />
         <Route path="/search" element={<Search />} />
         <Route path="/clinic/:id" element={<ClinicProfile />} />
         <Route path="/book/:clinicId" element={<Book />} />

@@ -64,52 +64,93 @@ export type Database = {
           },
         ]
       }
+      clinic_services: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          fee: number
+          id: string
+          service_name: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          fee?: number
+          id?: string
+          service_name: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          fee?: number
+          id?: string
+          service_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_services_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinics: {
         Row: {
           address: string
+          certificates: string[] | null
           city: string
           created_at: string
           description: string | null
           fees: number
           id: string
           image_url: string | null
+          images: string[] | null
           is_approved: boolean
           name: string
           owner_id: string | null
           phone: string | null
           rating: number | null
+          registration_number: string | null
           specializations: string[] | null
           updated_at: string
         }
         Insert: {
           address: string
+          certificates?: string[] | null
           city: string
           created_at?: string
           description?: string | null
           fees?: number
           id?: string
           image_url?: string | null
+          images?: string[] | null
           is_approved?: boolean
           name: string
           owner_id?: string | null
           phone?: string | null
           rating?: number | null
+          registration_number?: string | null
           specializations?: string[] | null
           updated_at?: string
         }
         Update: {
           address?: string
+          certificates?: string[] | null
           city?: string
           created_at?: string
           description?: string | null
           fees?: number
           id?: string
           image_url?: string | null
+          images?: string[] | null
           is_approved?: boolean
           name?: string
           owner_id?: string | null
           phone?: string | null
           rating?: number | null
+          registration_number?: string | null
           specializations?: string[] | null
           updated_at?: string
         }
@@ -120,6 +161,7 @@ export type Database = {
           bio: string | null
           clinic_id: string
           created_at: string
+          fee: number | null
           id: string
           image_url: string | null
           name: string
@@ -129,6 +171,7 @@ export type Database = {
           bio?: string | null
           clinic_id: string
           created_at?: string
+          fee?: number | null
           id?: string
           image_url?: string | null
           name: string
@@ -138,6 +181,7 @@ export type Database = {
           bio?: string | null
           clinic_id?: string
           created_at?: string
+          fee?: number | null
           id?: string
           image_url?: string | null
           name?: string
