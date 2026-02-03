@@ -8,7 +8,6 @@ import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
 import { Heart, Mail, Lock, User, Phone, Loader2, ArrowLeft, Building2 } from 'lucide-react';
 import { z } from 'zod';
-import { ClinicRegistrationForm, type ClinicRegistrationData } from '@/components/auth/ClinicRegistrationForm';
 
 const signInSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -25,9 +24,8 @@ const signUpSchema = z.object({
 export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, signIn, signUp, signUpClinic, isLoading } = useAuthStore();
+  const { user, signIn, signUp, isLoading } = useAuthStore();
 
-  const isClinicRegistration = searchParams.get('type') === 'clinic';
   const [mode, setMode] = useState<'signin' | 'signup'>(
     searchParams.get('mode') === 'signup' ? 'signup' : 'signin'
   );
@@ -95,76 +93,6 @@ export default function Auth() {
       }
     }
   };
-
-  const handleClinicSubmit = async (data: ClinicRegistrationData) => {
-    const { error } = await signUpClinic(data);
-    if (error) {
-      if (error.message.includes('already registered')) {
-        toast.error('This email is already registered. Please sign in.');
-      } else {
-        toast.error(error.message);
-      }
-    } else {
-      toast.success('Clinic registered! Your application is under review.');
-      navigate('/');
-    }
-  };
-
-  // Clinic Registration UI
-  if (isClinicRegistration && mode === 'signup') {
-    return (
-      <Layout showFooter={false}>
-        <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 gradient-hero">
-          <Card variant="elevated" className="w-full max-w-2xl animate-scale-in">
-            <CardHeader className="text-center pb-4">
-              <Link to="/" className="inline-flex items-center gap-2 justify-center mb-4 group">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-primary transition-transform group-hover:scale-105">
-                  <Heart className="h-5 w-5 text-primary-foreground" />
-                </div>
-                <span className="text-2xl font-bold text-foreground">
-                  Well<span className="text-primary">Sathi</span>
-                </span>
-              </Link>
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Building2 className="h-5 w-5 text-primary" />
-                <CardTitle className="text-2xl">Register Your Clinic</CardTitle>
-              </div>
-              <CardDescription>
-                Join WellSathi to manage appointments and grow your practice
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent>
-              <ClinicRegistrationForm onSubmit={handleClinicSubmit} isLoading={isLoading} />
-
-              <div className="mt-6 text-center text-sm">
-                <p className="text-muted-foreground">
-                  Already have an account?{' '}
-                  <button
-                    type="button"
-                    onClick={() => setMode('signin')}
-                    className="text-primary font-semibold hover:underline"
-                  >
-                    Sign in
-                  </button>
-                </p>
-              </div>
-
-              <div className="mt-4 text-center">
-                <Link
-                  to="/"
-                  className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to home
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </Layout>
-    );
-  }
 
   return (
     <Layout showFooter={false}>
@@ -293,6 +221,20 @@ export default function Auth() {
                   </button>
                 </p>
               )}
+            </div>
+
+            {/* Clinic Registration Link */}
+            <div className="mt-6 pt-6 border-t border-border">
+              <Link
+                to="/register-clinic"
+                className="flex items-center justify-center gap-2 p-3 rounded-lg bg-accent/50 hover:bg-accent transition-colors group"
+              >
+                <Building2 className="h-5 w-5 text-primary" />
+                <span className="text-sm font-medium text-foreground">
+                  Are you a clinic owner?{' '}
+                  <span className="text-primary group-hover:underline">Register your clinic</span>
+                </span>
+              </Link>
             </div>
 
             <div className="mt-4 text-center">
