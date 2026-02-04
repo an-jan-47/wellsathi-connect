@@ -26,10 +26,10 @@ export function ClinicCard({ clinic }: ClinicCardProps) {
             </span>
           </div>
         )}
-        {clinic.rating > 0 && (
+        {clinic.rating && clinic.rating > 0 && (
           <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-card/90 backdrop-blur-sm text-sm font-semibold">
             <Star className="h-4 w-4 text-warning fill-warning" />
-            {clinic.rating.toFixed(1)}
+            {Number(clinic.rating).toFixed(1)}
           </div>
         )}
       </div>
@@ -50,7 +50,7 @@ export function ClinicCard({ clinic }: ClinicCardProps) {
           <span className="line-clamp-1">{clinic.address}, {clinic.city}</span>
         </div>
 
-        {clinic.specializations.length > 0 && (
+        {clinic.specializations && clinic.specializations.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-4">
             {clinic.specializations.slice(0, 3).map((spec) => (
               <Badge key={spec} variant="muted" className="text-xs">

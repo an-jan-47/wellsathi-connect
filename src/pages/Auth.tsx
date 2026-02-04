@@ -24,7 +24,8 @@ const signUpSchema = z.object({
 export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, signIn, signUp, isLoading } = useAuthStore();
+  const { user, roles, isLoading, isInitialized } = useAuthStore();
+  const { signIn, signUp } = useAuthStore();
 
   const [mode, setMode] = useState<'signin' | 'signup'>(
     searchParams.get('mode') === 'signup' ? 'signup' : 'signin'
@@ -37,11 +38,18 @@ export default function Auth() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Role-based redirect after login
   useEffect(() => {
-    if (user) {
-      navigate('/');
+    if (user && isInitialized && !isLoading) {
+      if (roles.includes('clinic')) {
+        navigate('/dashboard/clinic');
+      } else if (roles.includes('admin')) {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     }
-  }, [user, navigate]);
+  }, [user, roles, isInitialized, isLoading, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -60,7 +68,7 @@ export default function Auth() {
           toast.error(error.message);
         } else {
           toast.success('Welcome back!');
-          navigate('/');
+          // Redirect will be handled by the useEffect hook based on role
         }
       } else {
         const validated = signUpSchema.parse(formData);

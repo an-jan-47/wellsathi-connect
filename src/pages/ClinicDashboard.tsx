@@ -471,7 +471,7 @@ export default function ClinicDashboard() {
                   <p className="font-semibold">{clinic.rating || '—'}</p>
                 </div>
               </div>
-              {clinic.specializations.length > 0 && (
+              {clinic.specializations && clinic.specializations.length > 0 && (
                 <div>
                   <label className="text-sm font-medium text-muted-foreground mb-2 block">
                     Specializations

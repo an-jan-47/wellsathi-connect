@@ -146,10 +146,10 @@ export default function ClinicProfile() {
                       <span>{clinic.address}, {clinic.city}</span>
                     </div>
                   </div>
-                  {clinic.rating > 0 && (
+                  {clinic.rating && clinic.rating > 0 && (
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent">
                       <Star className="h-5 w-5 text-warning fill-warning" />
-                      <span className="font-bold">{clinic.rating.toFixed(1)}</span>
+                      <span className="font-bold">{Number(clinic.rating).toFixed(1)}</span>
                     </div>
                   )}
                 </div>
@@ -168,7 +168,7 @@ export default function ClinicProfile() {
                   )}
                 </div>
 
-                {clinic.specializations.length > 0 && (
+                {clinic.specializations && clinic.specializations.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {clinic.specializations.map((spec) => (
                       <Badge key={spec} variant="accent">

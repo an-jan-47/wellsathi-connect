@@ -24,10 +24,13 @@ export interface Clinic {
   fees: number;
   phone: string | null;
   description: string | null;
-  specializations: string[];
+  specializations: string[] | null;
   is_approved: boolean;
-  rating: number;
+  rating: number | null;
   image_url: string | null;
+  images: string[] | null;
+  certificates: string[] | null;
+  registration_number: string | null;
   created_at: string;
   updated_at: string;
 }
