@@ -4,11 +4,18 @@ import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/integrations/supabase/client';
-import { Calendar, Clock, MapPin, Loader2, Search } from 'lucide-react';
+import { toast } from 'sonner';
+import { Calendar, Clock, MapPin, Loader2, Search, XCircle, User, Phone, Save } from 'lucide-react';
 import { format, parseISO, isPast, isToday } from 'date-fns';
 import type { Appointment, Clinic } from '@/types';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface AppointmentWithClinic extends Appointment {
   clinics: Clinic;
@@ -19,18 +26,25 @@ export default function UserDashboard() {
   const { user, profile, isLoading: authLoading, isInitialized } = useAuthStore();
   const [appointments, setAppointments] = useState<AppointmentWithClinic[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'appointments' | 'profile'>('appointments');
+
+  // Profile editing
+  const [profileForm, setProfileForm] = useState({ name: '', phone: '' });
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   useEffect(() => {
-    if (isInitialized && !authLoading && !user) {
-      navigate('/auth');
-    }
+    if (isInitialized && !authLoading && !user) navigate('/auth');
   }, [user, authLoading, isInitialized, navigate]);
 
   useEffect(() => {
-    if (user) {
-      fetchAppointments();
-    }
+    if (user) fetchAppointments();
   }, [user]);
+
+  useEffect(() => {
+    if (profile) {
+      setProfileForm({ name: profile.name || '', phone: profile.phone || '' });
+    }
+  }, [profile]);
 
   const fetchAppointments = async () => {
     try {
@@ -38,9 +52,9 @@ export default function UserDashboard() {
         .from('appointments')
         .select('*, clinics(*)')
         .eq('user_id', user?.id)
-        .order('date', { ascending: true })
-        .order('time', { ascending: true });
-
+        .order('date', { ascending: false })
+        .order('time', { ascending: true })
+        .limit(50);
       if (error) throw error;
       setAppointments(data as AppointmentWithClinic[] || []);
     } catch (error) {
@@ -50,116 +64,169 @@ export default function UserDashboard() {
     }
   };
 
+  const cancelAppointment = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({ status: 'cancelled' as const })
+        .eq('id', id);
+      if (error) throw error;
+      toast.success('Appointment cancelled');
+      fetchAppointments();
+    } catch {
+      toast.error('Failed to cancel appointment');
+    }
+  };
+
+  const saveProfile = async () => {
+    if (!profileForm.name.trim()) {
+      toast.error('Name is required');
+      return;
+    }
+    setIsSavingProfile(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ name: profileForm.name.trim(), phone: profileForm.phone.trim() || null })
+        .eq('id', user?.id);
+      if (error) throw error;
+      toast.success('Profile updated');
+      // Refresh auth store
+      if (user) await useAuthStore.getState().fetchUserData(user.id);
+    } catch {
+      toast.error('Failed to update profile');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
   const upcomingAppointments = appointments.filter(
     (apt) => !isPast(parseISO(`${apt.date}T${apt.time}`)) || isToday(parseISO(apt.date))
   );
-
   const pastAppointments = appointments.filter(
     (apt) => isPast(parseISO(`${apt.date}T${apt.time}`)) && !isToday(parseISO(apt.date))
   );
 
   if (authLoading || !isInitialized) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </Layout>
-    );
+    return <Layout><div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></Layout>;
   }
 
   return (
     <Layout>
       <div className="gradient-hero py-8">
         <div className="container">
-          <h1 className="text-3xl font-bold text-foreground">
-            Welcome, {profile?.name || 'User'}
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Manage your appointments and health journey
-          </p>
+          <h1 className="text-3xl font-bold text-foreground">Welcome, {profile?.name || 'User'}</h1>
+          <p className="text-muted-foreground mt-2">Manage your appointments and profile</p>
         </div>
       </div>
 
       <div className="container py-8">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : appointments.length === 0 ? (
-          <Card className="text-center py-12">
-            <CardContent>
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                <Calendar className="h-8 w-8 text-muted-foreground" />
+        {/* Tabs */}
+        <div className="flex gap-1 mb-6 border-b border-border">
+          {(['appointments', 'profile'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all capitalize ${
+                activeTab === tab
+                  ? 'bg-card text-primary border-b-2 border-primary -mb-px'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'appointments' && (
+          <>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+            ) : appointments.length === 0 ? (
+              <Card className="text-center py-12">
+                <CardContent>
+                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                    <Calendar className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-foreground mb-2">No appointments yet</h3>
+                  <p className="text-muted-foreground mb-6">Find a clinic and book your first appointment</p>
+                  <Button asChild><Link to="/search"><Search className="h-4 w-4 mr-2" />Find Clinics</Link></Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-8">
+                <section>
+                  <h2 className="text-xl font-semibold text-foreground mb-4">Upcoming ({upcomingAppointments.length})</h2>
+                  {upcomingAppointments.length > 0 ? (
+                    <div className="grid gap-4">
+                      {upcomingAppointments.map((apt) => (
+                        <AppointmentCard key={apt.id} appointment={apt} onCancel={cancelAppointment} />
+                      ))}
+                    </div>
+                  ) : (
+                    <Card className="bg-muted/50"><CardContent className="py-8 text-center text-muted-foreground">No upcoming appointments</CardContent></Card>
+                  )}
+                </section>
+                {pastAppointments.length > 0 && (
+                  <section>
+                    <h2 className="text-xl font-semibold text-foreground mb-4">Past ({pastAppointments.length})</h2>
+                    <div className="grid gap-4">
+                      {pastAppointments.slice(0, 10).map((apt) => (
+                        <AppointmentCard key={apt.id} appointment={apt} isPast />
+                      ))}
+                    </div>
+                  </section>
+                )}
               </div>
-              <h3 className="text-xl font-semibold text-foreground mb-2">
-                No appointments yet
-              </h3>
-              <p className="text-muted-foreground mb-6">
-                Find a clinic and book your first appointment
-              </p>
-              <Button asChild>
-                <Link to="/search">
-                  <Search className="h-4 w-4 mr-2" />
-                  Find Clinics
-                </Link>
+            )}
+          </>
+        )}
+
+        {activeTab === 'profile' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Profile</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Full Name</label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input value={profileForm.name} onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })} className="pl-11" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Phone</label>
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input value={profileForm.phone} onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })} className="pl-11" />
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Email</label>
+                <Input value={user?.email || ''} disabled className="bg-muted" />
+              </div>
+              <Button onClick={saveProfile} disabled={isSavingProfile}>
+                {isSavingProfile ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                Save Profile
               </Button>
             </CardContent>
           </Card>
-        ) : (
-          <div className="space-y-8">
-            {/* Upcoming Appointments */}
-            <section>
-              <h2 className="text-xl font-semibold text-foreground mb-4">
-                Upcoming Appointments
-              </h2>
-              {upcomingAppointments.length > 0 ? (
-                <div className="grid gap-4">
-                  {upcomingAppointments.map((apt) => (
-                    <AppointmentCard key={apt.id} appointment={apt} />
-                  ))}
-                </div>
-              ) : (
-                <Card className="bg-muted/50">
-                  <CardContent className="py-8 text-center text-muted-foreground">
-                    No upcoming appointments
-                  </CardContent>
-                </Card>
-              )}
-            </section>
-
-            {/* Past Appointments */}
-            {pastAppointments.length > 0 && (
-              <section>
-                <h2 className="text-xl font-semibold text-foreground mb-4">
-                  Past Appointments
-                </h2>
-                <div className="grid gap-4">
-                  {pastAppointments.slice(0, 5).map((apt) => (
-                    <AppointmentCard key={apt.id} appointment={apt} isPast />
-                  ))}
-                </div>
-              </section>
-            )}
-          </div>
         )}
       </div>
     </Layout>
   );
 }
 
-function AppointmentCard({
-  appointment,
-  isPast = false,
-}: {
+function AppointmentCard({ appointment, isPast = false, onCancel }: {
   appointment: AppointmentWithClinic;
   isPast?: boolean;
+  onCancel?: (id: string) => void;
 }) {
-  const statusVariant = {
-    pending: 'pending',
-    confirmed: 'confirmed',
-    cancelled: 'cancelled',
-  } as const;
+  const statusVariant = { pending: 'pending', confirmed: 'confirmed', cancelled: 'cancelled' } as const;
+  const canCancel = !isPast && appointment.status === 'pending' && onCancel;
 
   return (
     <Card variant={isPast ? 'default' : 'elevated'} className={isPast ? 'opacity-75' : ''}>
@@ -172,31 +239,42 @@ function AppointmentCard({
               </span>
             </div>
             <div>
-              <h3 className="font-semibold text-foreground">
-                {appointment.clinics?.name || 'Clinic'}
-              </h3>
+              <h3 className="font-semibold text-foreground">{appointment.clinics?.name || 'Clinic'}</h3>
               <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  {format(parseISO(appointment.date), 'MMM d, yyyy')}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Clock className="h-4 w-4" />
-                  {appointment.time.slice(0, 5)}
-                </span>
+                <span className="flex items-center gap-1"><Calendar className="h-4 w-4" />{format(parseISO(appointment.date), 'MMM d, yyyy')}</span>
+                <span className="flex items-center gap-1"><Clock className="h-4 w-4" />{appointment.time.slice(0, 5)}</span>
                 {appointment.clinics?.city && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
-                    {appointment.clinics.city}
-                  </span>
+                  <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{appointment.clinics.city}</span>
                 )}
               </div>
             </div>
           </div>
-
-          <Badge variant={statusVariant[appointment.status]}>
-            {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant={statusVariant[appointment.status]}>
+              {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+            </Badge>
+            {canCancel && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="text-destructive border-destructive/30">
+                    <XCircle className="h-4 w-4 mr-1" />Cancel
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Cancel Appointment?</AlertDialogTitle>
+                    <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep Appointment</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => onCancel(appointment.id)} className="bg-destructive text-destructive-foreground">
+                      Yes, Cancel
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
