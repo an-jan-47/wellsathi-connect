@@ -17,6 +17,7 @@ export function MultiStepClinicRegistration() {
     userId,
     isSubmitting,
     isSuccess,
+    isLoggedIn,
     handleUserAccountSubmit,
     handleClinicDetailsSubmit,
     handleDoctorsServicesSubmit,
@@ -54,7 +55,7 @@ export function MultiStepClinicRegistration() {
         {/* Form Container */}
         <div className="max-w-xl mx-auto">
           <div className="bg-card rounded-2xl shadow-medium border border-border/50 p-6 md:p-8">
-            {currentStep === 1 && (
+            {currentStep === 1 && !isLoggedIn && (
               <StepUserAccount
                 data={formData}
                 onNext={handleUserAccountSubmit}
@@ -99,7 +100,7 @@ export function MultiStepClinicRegistration() {
           </div>
 
           {/* Login Link */}
-          {currentStep === 1 && (
+          {currentStep === 1 && !isLoggedIn && (
             <p className="text-center text-sm text-muted-foreground mt-6">
               Already have an account?{' '}
               <Link to="/auth" className="text-primary hover:underline font-medium">

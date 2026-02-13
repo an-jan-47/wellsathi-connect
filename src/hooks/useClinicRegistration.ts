@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useAuthStore } from '@/stores/authStore';
 import type { 
   ClinicRegistrationData, 
   UserAccountData, 
@@ -18,10 +19,30 @@ const STEPS = [
 ];
 
 export function useClinicRegistration() {
-  const [currentStep, setCurrentStep] = useState(1);
+  const { user, profile } = useAuthStore();
+  const isLoggedIn = !!user;
+  const [currentStep, setCurrentStep] = useState(isLoggedIn ? 2 : 1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(user?.id ?? null);
+
+  // If user logs in while on step 1, auto-advance
+  useEffect(() => {
+    if (user && currentStep === 1) {
+      setUserId(user.id);
+      setFormData(prev => ({
+        ...prev,
+        ownerName: profile?.name || '',
+        email: user.email || '',
+        phone: profile?.phone || '',
+      }));
+      // Assign clinic role for existing users
+      supabase.rpc('assign_clinic_role', { _user_id: user.id }).then(({ error }) => {
+        if (error) console.error('Error assigning clinic role:', error);
+      });
+      setCurrentStep(2);
+    }
+  }, [user, profile]);
   
   // Form data across all steps
   const [formData, setFormData] = useState<Partial<ClinicRegistrationData>>({
@@ -243,8 +264,9 @@ export function useClinicRegistration() {
   }, [userId, formData]);
 
   const goBack = useCallback(() => {
-    setCurrentStep(prev => Math.max(1, prev - 1));
-  }, []);
+    const minStep = isLoggedIn ? 2 : 1;
+    setCurrentStep(prev => Math.max(minStep, prev - 1));
+  }, [isLoggedIn]);
 
   return {
     currentStep,
@@ -253,6 +275,7 @@ export function useClinicRegistration() {
     userId,
     isSubmitting,
     isSuccess,
+    isLoggedIn,
     handleUserAccountSubmit,
     handleClinicDetailsSubmit,
     handleDoctorsServicesSubmit,
