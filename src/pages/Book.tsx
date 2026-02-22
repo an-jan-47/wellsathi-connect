@@ -24,7 +24,15 @@ export default function Book() {
   const { clinicId } = useParams<{ clinicId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user, profile } = useAuthStore();
+  const { user, profile, isLoading: authLoading, isInitialized } = useAuthStore();
+
+  // Require login
+  useEffect(() => {
+    if (isInitialized && !authLoading && !user) {
+      toast.error('Please log in to book an appointment');
+      navigate(`/auth?redirect=/book/${clinicId}`);
+    }
+  }, [user, authLoading, isInitialized, navigate, clinicId]);
 
   const [clinic, setClinic] = useState<Clinic | null>(null);
   const [slots, setSlots] = useState<TimeSlot[]>([]);
@@ -200,7 +208,7 @@ export default function Book() {
             <Card>
               <CardHeader>
                 <CardTitle>Your Details</CardTitle>
-                <CardDescription>Fill in your details to book. No account required.</CardDescription>
+                <CardDescription>Fill in your details to confirm the booking.</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">

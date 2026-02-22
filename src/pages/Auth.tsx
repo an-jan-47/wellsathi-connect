@@ -41,7 +41,10 @@ export default function Auth() {
   // Role-based redirect after login
   useEffect(() => {
     if (user && isInitialized && !isLoading) {
-      if (roles.includes('clinic')) {
+      const redirectTo = searchParams.get('redirect');
+      if (redirectTo) {
+        navigate(redirectTo);
+      } else if (roles.includes('clinic')) {
         navigate('/dashboard/clinic');
       } else if (roles.includes('admin')) {
         navigate('/admin');
@@ -49,7 +52,7 @@ export default function Auth() {
         navigate('/');
       }
     }
-  }, [user, roles, isInitialized, isLoading, navigate]);
+  }, [user, roles, isInitialized, isLoading, navigate, searchParams]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

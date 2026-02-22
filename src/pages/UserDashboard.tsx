@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Calendar, Clock, MapPin, Loader2, Search, XCircle, User, Phone, Save } from 'lucide-react';
+import { Calendar, Clock, MapPin, Loader2, Search, XCircle, User, Phone, Save, Star } from 'lucide-react';
 import { format, parseISO, isPast, isToday } from 'date-fns';
 import type { Appointment, Clinic } from '@/types';
 import {
@@ -16,6 +16,10 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import { ClinicReviews } from '@/components/clinic/ClinicReviews';
 
 interface AppointmentWithClinic extends Appointment {
   clinics: Clinic;
@@ -172,7 +176,7 @@ export default function UserDashboard() {
                     <h2 className="text-xl font-semibold text-foreground mb-4">Past ({pastAppointments.length})</h2>
                     <div className="grid gap-4">
                       {pastAppointments.slice(0, 10).map((apt) => (
-                        <AppointmentCard key={apt.id} appointment={apt} isPast />
+                        <AppointmentCard key={apt.id} appointment={apt} isPast onReviewDone={fetchAppointments} />
                       ))}
                     </div>
                   </section>
@@ -220,63 +224,91 @@ export default function UserDashboard() {
   );
 }
 
-function AppointmentCard({ appointment, isPast = false, onCancel }: {
+function AppointmentCard({ appointment, isPast = false, onCancel, onReviewDone }: {
   appointment: AppointmentWithClinic;
   isPast?: boolean;
   onCancel?: (id: string) => void;
+  onReviewDone?: () => void;
 }) {
+  const [reviewOpen, setReviewOpen] = useState(false);
   const statusVariant = { pending: 'pending', confirmed: 'confirmed', cancelled: 'cancelled' } as const;
   const canCancel = !isPast && appointment.status === 'pending' && onCancel;
+  const canReview = isPast && appointment.status === 'confirmed';
 
   return (
-    <Card variant={isPast ? 'default' : 'elevated'} className={isPast ? 'opacity-75' : ''}>
-      <CardContent className="p-5">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center flex-shrink-0">
-              <span className="text-lg font-bold text-primary-foreground">
-                {appointment.clinics?.name?.charAt(0) || 'C'}
-              </span>
-            </div>
-            <div>
-              <h3 className="font-semibold text-foreground">{appointment.clinics?.name || 'Clinic'}</h3>
-              <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1"><Calendar className="h-4 w-4" />{format(parseISO(appointment.date), 'MMM d, yyyy')}</span>
-                <span className="flex items-center gap-1"><Clock className="h-4 w-4" />{appointment.time.slice(0, 5)}</span>
-                {appointment.clinics?.city && (
-                  <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{appointment.clinics.city}</span>
-                )}
+    <>
+      <Card variant={isPast ? 'default' : 'elevated'} className={isPast ? 'opacity-75' : ''}>
+        <CardContent className="p-5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center flex-shrink-0">
+                <span className="text-lg font-bold text-primary-foreground">
+                  {appointment.clinics?.name?.charAt(0) || 'C'}
+                </span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground">{appointment.clinics?.name || 'Clinic'}</h3>
+                <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1"><Calendar className="h-4 w-4" />{format(parseISO(appointment.date), 'MMM d, yyyy')}</span>
+                  <span className="flex items-center gap-1"><Clock className="h-4 w-4" />{appointment.time.slice(0, 5)}</span>
+                  {appointment.clinics?.city && (
+                    <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{appointment.clinics.city}</span>
+                  )}
+                </div>
               </div>
             </div>
+            <div className="flex items-center gap-2">
+              <Badge variant={statusVariant[appointment.status]}>
+                {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+              </Badge>
+              {canReview && (
+                <Button variant="outline" size="sm" onClick={() => setReviewOpen(true)}>
+                  <Star className="h-4 w-4 mr-1" />Review
+                </Button>
+              )}
+              {canCancel && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="text-destructive border-destructive/30">
+                      <XCircle className="h-4 w-4 mr-1" />Cancel
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Cancel Appointment?</AlertDialogTitle>
+                      <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Keep Appointment</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => onCancel(appointment.id)} className="bg-destructive text-destructive-foreground">
+                        Yes, Cancel
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={statusVariant[appointment.status]}>
-              {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
-            </Badge>
-            {canCancel && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="text-destructive border-destructive/30">
-                    <XCircle className="h-4 w-4 mr-1" />Cancel
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Cancel Appointment?</AlertDialogTitle>
-                    <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Keep Appointment</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => onCancel(appointment.id)} className="bg-destructive text-destructive-foreground">
-                      Yes, Cancel
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      {/* Review Dialog */}
+      <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Review {appointment.clinics?.name}</DialogTitle>
+          </DialogHeader>
+          <ClinicReviews
+            clinicId={appointment.clinic_id}
+            showForm
+            appointmentId={appointment.id}
+            onReviewSubmitted={() => {
+              setReviewOpen(false);
+              onReviewDone?.();
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

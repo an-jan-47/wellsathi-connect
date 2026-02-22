@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { MapPin, Phone, Star, IndianRupee, Clock, User, Loader2, ArrowLeft, Calendar, Stethoscope } from 'lucide-react';
+import { useAuthStore } from '@/stores/authStore';
+import { MapPin, Phone, Star, IndianRupee, Clock, User, Loader2, ArrowLeft, Calendar, Stethoscope, MessageSquare } from 'lucide-react';
 import type { Clinic, Doctor, TimeSlot } from '@/types';
 import { format, addDays } from 'date-fns';
+import { ClinicReviews } from '@/components/clinic/ClinicReviews';
 
 interface Service {
   id: string;
@@ -17,6 +19,8 @@ interface Service {
 
 export default function ClinicProfile() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [clinic, setClinic] = useState<Clinic | null>(null);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -178,6 +182,19 @@ export default function ClinicProfile() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Reviews Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-primary" />
+                  Patient Reviews
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ClinicReviews clinicId={clinic.id} />
+              </CardContent>
+            </Card>
           </div>
 
           {/* Booking Sidebar */}
@@ -216,8 +233,18 @@ export default function ClinicProfile() {
                     <p className="text-sm text-muted-foreground py-4 text-center bg-muted/50 rounded-lg">No slots available</p>
                   )}
                 </div>
-                <Button asChild className="w-full" size="lg">
-                  <Link to={`/book/${clinic.id}?date=${selectedDate}`}>Book Now</Link>
+                <Button 
+                  className="w-full" 
+                  size="lg"
+                  onClick={() => {
+                    if (!user) {
+                      navigate(`/auth?redirect=/book/${clinic.id}?date=${selectedDate}`);
+                    } else {
+                      navigate(`/book/${clinic.id}?date=${selectedDate}`);
+                    }
+                  }}
+                >
+                  {user ? 'Book Now' : 'Login to Book'}
                 </Button>
               </CardContent>
             </Card>

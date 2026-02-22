@@ -221,6 +221,54 @@ export type Database = {
         }
         Relationships: []
       }
+      reviews: {
+        Row: {
+          appointment_id: string | null
+          clinic_id: string
+          comment: string | null
+          created_at: string
+          id: string
+          rating: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          clinic_id: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          appointment_id?: string | null
+          clinic_id?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: true
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       time_slots: {
         Row: {
           clinic_id: string

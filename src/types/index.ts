@@ -70,6 +70,18 @@ export interface Appointment {
   clinic?: Clinic;
 }
 
+export interface Review {
+  id: string;
+  clinic_id: string;
+  user_id: string;
+  appointment_id: string | null;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+  updated_at: string;
+  profiles?: Profile;
+}
+
 export interface SearchFilters {
   location: string;
   specialty: string;

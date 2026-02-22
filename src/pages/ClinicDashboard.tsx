@@ -17,8 +17,10 @@ import { ClinicSlots } from '@/components/clinic-dashboard/ClinicSlots';
 import { ClinicProfileEditor } from '@/components/clinic-dashboard/ClinicProfileEditor';
 import { ClinicDoctors } from '@/components/clinic-dashboard/ClinicDoctors';
 import { ClinicServices } from '@/components/clinic-dashboard/ClinicServices';
+import { ClinicAnalytics } from '@/components/clinic-dashboard/ClinicAnalytics';
+import { ClinicReviews } from '@/components/clinic/ClinicReviews';
 
-type Tab = 'overview' | 'appointments' | 'slots' | 'doctors' | 'services' | 'profile';
+type Tab = 'overview' | 'appointments' | 'slots' | 'doctors' | 'services' | 'analytics' | 'reviews' | 'profile';
 
 export default function ClinicDashboard() {
   const navigate = useNavigate();
@@ -123,6 +125,8 @@ export default function ClinicDashboard() {
     { id: 'slots', label: 'Time Slots', icon: <Clock className="h-4 w-4" /> },
     { id: 'doctors', label: 'Doctors', icon: <Users className="h-4 w-4" /> },
     { id: 'services', label: 'Services', icon: <Stethoscope className="h-4 w-4" /> },
+    { id: 'analytics', label: 'Analytics', icon: <Calendar className="h-4 w-4" /> },
+    { id: 'reviews', label: 'Reviews', icon: <Users className="h-4 w-4" /> },
     { id: 'profile', label: 'Profile', icon: <Building2 className="h-4 w-4" /> },
   ];
 
@@ -264,6 +268,22 @@ export default function ClinicDashboard() {
           <div>
             <h2 className="text-lg font-semibold mb-4">Manage Services</h2>
             <ClinicServices clinicId={clinic.id} />
+          </div>
+        )}
+
+        {/* Analytics Tab */}
+        {activeTab === 'analytics' && (
+          <div>
+            <h2 className="text-lg font-semibold mb-4">Analytics & Insights</h2>
+            <ClinicAnalytics clinicId={clinic.id} clinicFees={clinic.fees} clinicRating={clinic.rating} />
+          </div>
+        )}
+
+        {/* Reviews Tab */}
+        {activeTab === 'reviews' && (
+          <div>
+            <h2 className="text-lg font-semibold mb-4">Patient Reviews</h2>
+            <ClinicReviews clinicId={clinic.id} />
           </div>
         )}
 
