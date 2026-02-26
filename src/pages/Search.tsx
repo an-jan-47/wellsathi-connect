@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ClinicCard } from '@/components/clinic/ClinicCard';
-import { supabase } from '@/integrations/supabase/client';
+import { useSearchClinics } from '@/hooks/queries/useClinics';
+import { SPECIALIZATIONS } from '@/constants';
 import { Search as SearchIcon, MapPin, SlidersHorizontal, Loader2 } from 'lucide-react';
 import {
   Select,
@@ -14,29 +15,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Clinic } from '@/types';
 
-const SPECIALIZATIONS = [
-  'General Medicine',
-  'Pediatrics',
-  'Cardiology',
-  'Dermatology',
-  'Orthopedics',
-  'ENT',
-  'Ophthalmology',
-  'Gynecology',
-  'Neurology',
-  'Psychiatry',
-  'Dentistry',
-  'Urology',
-];
-
-type SortOption = 'rating' | 'fees_low' | 'fees_high' | 'name';
+import type { SortOption } from '@/constants';
 
 export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [clinics, setClinics] = useState<Clinic[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
 
   const [filters, setFilters] = useState({
@@ -47,68 +30,16 @@ export default function Search() {
     sortBy: (searchParams.get('sortBy') as SortOption) || 'rating',
   });
 
-  useEffect(() => {
-    fetchClinics();
-  }, [searchParams]);
-
-  const fetchClinics = async () => {
-    setIsLoading(true);
-    try {
-      const location = searchParams.get('location');
-      const specialty = searchParams.get('specialty');
-      const maxFees = searchParams.get('maxFees');
-      const minRating = searchParams.get('minRating');
-      const sortBy = searchParams.get('sortBy') as SortOption || 'rating';
-
-      let query = supabase
-        .from('clinics')
-        .select('*')
-        .eq('is_approved', true)
-        .limit(20);
-
-      if (location) {
-        query = query.ilike('city', `%${location}%`);
-      }
-
-      if (specialty) {
-        query = query.contains('specializations', [specialty]);
-      }
-
-      if (maxFees) {
-        query = query.lte('fees', parseInt(maxFees));
-      }
-
-      if (minRating) {
-        query = query.gte('rating', parseFloat(minRating));
-      }
-
-      // Apply sorting
-      switch (sortBy) {
-        case 'fees_low':
-          query = query.order('fees', { ascending: true });
-          break;
-        case 'fees_high':
-          query = query.order('fees', { ascending: false });
-          break;
-        case 'name':
-          query = query.order('name', { ascending: true });
-          break;
-        case 'rating':
-        default:
-          query = query.order('rating', { ascending: false, nullsFirst: false });
-          break;
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      setClinics(data as Clinic[] || []);
-    } catch (error) {
-      console.error('Error fetching clinics:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  // Derive search filters from URL params for React Query
+  const searchFilters = {
+    location: searchParams.get('location') || undefined,
+    specialty: searchParams.get('specialty') || undefined,
+    maxFees: searchParams.get('maxFees') || undefined,
+    minRating: searchParams.get('minRating') || undefined,
+    sortBy: (searchParams.get('sortBy') as SortOption) || 'rating',
   };
+
+  const { data: clinics = [], isLoading } = useSearchClinics(searchFilters);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

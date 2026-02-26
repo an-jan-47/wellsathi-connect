@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
+import { useClinicProfile } from '@/hooks/queries/useClinics';
+import { useAvailableSlots } from '@/hooks/queries/useSlots';
 import { MapPin, Phone, Star, IndianRupee, Clock, User, Loader2, ArrowLeft, Calendar, Stethoscope, MessageSquare } from 'lucide-react';
-import type { Clinic, Doctor, TimeSlot } from '@/types';
+import type { Doctor, TimeSlot } from '@/types';
 import { format, addDays } from 'date-fns';
 import { ClinicReviews } from '@/components/clinic/ClinicReviews';
 
@@ -21,51 +22,19 @@ export default function ClinicProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const [clinic, setClinic] = useState<Clinic | null>(null);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
-  const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
-  const [isLoading, setIsLoading] = useState(true);
+
+  const { data: profileData, isLoading } = useClinicProfile(id);
+  const { data: slots = [] } = useAvailableSlots(id, selectedDate);
+
+  const clinic = profileData?.clinic ?? null;
+  const doctors = (profileData?.doctors ?? []) as Doctor[];
+  const services = profileData?.services ?? [];
 
   const dateOptions = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(new Date(), i);
     return { value: format(date, 'yyyy-MM-dd'), label: format(date, 'EEE, MMM d'), isToday: i === 0 };
   });
-
-  useEffect(() => { if (id) fetchClinicData(); }, [id]);
-  useEffect(() => { if (id) fetchSlots(); }, [id, selectedDate]);
-
-  const fetchClinicData = async () => {
-    try {
-      const [clinicRes, doctorsRes, servicesRes] = await Promise.all([
-        supabase.from('clinics').select('*').eq('id', id).maybeSingle(),
-        supabase.from('doctors').select('*').eq('clinic_id', id),
-        supabase.from('clinic_services').select('*').eq('clinic_id', id).order('service_name'),
-      ]);
-      if (clinicRes.error) throw clinicRes.error;
-      setClinic(clinicRes.data as Clinic);
-      setDoctors(doctorsRes.data as Doctor[] || []);
-      setServices(servicesRes.data || []);
-    } catch (error) {
-      console.error('Error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchSlots = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('time_slots').select('*')
-        .eq('clinic_id', id).eq('date', selectedDate).eq('is_available', true)
-        .order('start_time');
-      if (error) throw error;
-      setSlots(data as TimeSlot[] || []);
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  };
 
   if (isLoading) {
     return <Layout><div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></Layout>;

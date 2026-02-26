@@ -11,14 +11,14 @@ import { z } from 'zod';
 
 const signInSchema = z.object({
   email: z.string().email('Please enter a valid email'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
 const signUpSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100),
   email: z.string().email('Please enter a valid email').max(255),
   phone: z.string().optional(),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
 export default function Auth() {
@@ -207,6 +207,17 @@ export default function Auth() {
                 )}
               </Button>
             </form>
+
+            {mode === 'signin' && (
+              <div className="mt-3 text-center">
+                <Link
+                  to="/auth/forgot-password"
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Forgot your password?
+                </Link>
+              </div>
+            )}
 
             <div className="mt-6 text-center text-sm">
               {mode === 'signin' ? (

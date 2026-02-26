@@ -6,13 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
+import { useClinic } from '@/hooks/queries/useClinics';
+import { useAllSlots } from '@/hooks/queries/useSlots';
+import { useBookAppointment } from '@/hooks/queries/useAppointments';
 import { toast } from 'sonner';
 import { format, parseISO, addDays } from 'date-fns';
 import { ArrowLeft, Calendar, Clock, User, Phone, MapPin, Loader2, CheckCircle2 } from 'lucide-react';
 import { z } from 'zod';
-import type { Clinic, TimeSlot } from '@/types';
 
 const bookingSchema = z.object({
   patientName: z.string().trim().min(2, 'Name must be at least 2 characters').max(100),
@@ -24,23 +25,14 @@ export default function Book() {
   const { clinicId } = useParams<{ clinicId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user, profile, isLoading: authLoading, isInitialized } = useAuthStore();
+  const { user, profile } = useAuthStore();
 
-  // Require login
-  useEffect(() => {
-    if (isInitialized && !authLoading && !user) {
-      toast.error('Please log in to book an appointment');
-      navigate(`/auth?redirect=/book/${clinicId}`);
-    }
-  }, [user, authLoading, isInitialized, navigate, clinicId]);
-
-  const [clinic, setClinic] = useState<Clinic | null>(null);
-  const [slots, setSlots] = useState<TimeSlot[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isBooked, setIsBooked] = useState(false);
-
+  const { data: clinic, isLoading } = useClinic(clinicId);
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || format(new Date(), 'yyyy-MM-dd'));
+  const { data: slots = [], refetch: refetchSlots } = useAllSlots(clinicId, selectedDate);
+  const bookMutation = useBookAppointment();
+
+  const [isBooked, setIsBooked] = useState(false);
   const [selectedSlotId, setSelectedSlotId] = useState<string>('');
   const [selectedTime, setSelectedTime] = useState(searchParams.get('time') || '');
 
@@ -67,34 +59,6 @@ export default function Book() {
     return { value: format(date, 'yyyy-MM-dd'), label: format(date, 'EEE, MMM d'), isToday: i === 0 };
   });
 
-  useEffect(() => { if (clinicId) fetchClinic(); }, [clinicId]);
-  useEffect(() => { if (clinicId) fetchSlots(); }, [clinicId, selectedDate]);
-
-  const fetchClinic = async () => {
-    try {
-      const { data, error } = await supabase.from('clinics').select('*').eq('id', clinicId).maybeSingle();
-      if (error) throw error;
-      setClinic(data as Clinic);
-    } catch (error) {
-      console.error('Error fetching clinic:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchSlots = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('time_slots').select('*')
-        .eq('clinic_id', clinicId).eq('date', selectedDate).eq('is_available', true)
-        .order('start_time');
-      if (error) throw error;
-      setSlots(data as TimeSlot[] || []);
-    } catch (error) {
-      console.error('Error fetching slots:', error);
-    }
-  };
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setErrors({ ...errors, [e.target.name]: '' });
@@ -102,35 +66,36 @@ export default function Book() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTime) {
+    if (!selectedTime || !clinicId) {
       toast.error('Please select a time slot');
       return;
     }
 
     try {
       const validated = bookingSchema.parse(formData);
-      setIsSubmitting(true);
 
-      // Create appointment
-      const { error: aptError } = await supabase.from('appointments').insert({
-        clinic_id: clinicId,
-        patient_name: validated.patientName,
-        patient_phone: validated.patientPhone,
+      bookMutation.mutate({
+        clinicId,
+        slotId: selectedSlotId,
+        patientName: validated.patientName,
+        patientPhone: validated.patientPhone,
         date: selectedDate,
         time: selectedTime,
         notes: validated.notes || null,
-        status: 'pending',
-        user_id: user?.id || null,
+      }, {
+        onSuccess: () => {
+          setIsBooked(true);
+          toast.success('Appointment booked successfully!');
+        },
+        onError: (error) => {
+          if (error.message.includes('no longer available')) {
+            toast.error('This slot was just booked by someone else. Please choose another.');
+            refetchSlots();
+          } else {
+            toast.error('Failed to book appointment. Please try again.');
+          }
+        },
       });
-      if (aptError) throw aptError;
-
-      // Mark slot as unavailable
-      if (selectedSlotId) {
-        await supabase.from('time_slots').update({ is_available: false }).eq('id', selectedSlotId);
-      }
-
-      setIsBooked(true);
-      toast.success('Appointment booked successfully!');
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
@@ -138,11 +103,7 @@ export default function Book() {
           if (err.path[0]) fieldErrors[err.path[0] as string] = err.message;
         });
         setErrors(fieldErrors);
-      } else {
-        toast.error('Failed to book appointment. Please try again.');
       }
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -235,11 +196,17 @@ export default function Book() {
                       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                         {slots.map((slot) => (
                           <button key={slot.id} type="button"
-                            onClick={() => { setSelectedTime(slot.start_time); setSelectedSlotId(slot.id); }}
+                            disabled={!slot.is_available}
+                            onClick={() => { if (slot.is_available) { setSelectedTime(slot.start_time); setSelectedSlotId(slot.id); } }}
                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                              selectedTime === slot.start_time ? 'gradient-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'
+                              !slot.is_available
+                                ? 'bg-muted/50 text-muted-foreground/50 cursor-not-allowed line-through'
+                                : selectedTime === slot.start_time
+                                  ? 'gradient-primary text-primary-foreground'
+                                  : 'bg-muted text-muted-foreground hover:text-foreground'
                             }`}>
                             {slot.start_time.slice(0, 5)}
+                            {!slot.is_available && <span className="block text-[10px] opacity-60">Booked</span>}
                           </button>
                         ))}
                       </div>
@@ -273,8 +240,8 @@ export default function Book() {
                     <Textarea name="notes" placeholder="Any specific concerns..." value={formData.notes} onChange={handleChange} rows={3} />
                   </div>
 
-                  <Button type="submit" size="lg" className="w-full" disabled={isSubmitting || !selectedTime}>
-                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm Booking'}
+                  <Button type="submit" size="lg" className="w-full" disabled={bookMutation.isPending || !selectedTime}>
+                    {bookMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm Booking'}
                   </Button>
                 </form>
               </CardContent>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,8 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/stores/authStore';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { useAllClinics, useUpdateClinicApproval } from '@/hooks/queries/useClinics';
+import { useAdminStats } from '@/hooks/queries/useProfile';
+import { StatCard } from '@/components/common/StatCard';
 import {
   Building2, CheckCircle2, XCircle, Loader2, MapPin, IndianRupee,
   Users, CalendarCheck, Search, Eye,
@@ -21,67 +22,16 @@ import {
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { user, hasRole, isLoading: authLoading, isInitialized } = useAuthStore();
-  const [clinics, setClinics] = useState<Clinic[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
-  const [stats, setStats] = useState({ totalUsers: 0, totalAppointments: 0 });
 
-  useEffect(() => {
-    if (isInitialized && !authLoading) {
-      if (!user) navigate('/auth');
-      else if (!hasRole('admin')) {
-        toast.error('You do not have admin access');
-        navigate('/');
-      }
-    }
-  }, [user, hasRole, authLoading, isInitialized, navigate]);
+  const { data: clinics = [], isLoading } = useAllClinics();
+  const { data: stats = { totalUsers: 0, totalAppointments: 0 } } = useAdminStats();
+  const updateApproval = useUpdateClinicApproval();
 
-  useEffect(() => {
-    if (user && hasRole('admin')) {
-      fetchClinics();
-      fetchStats();
-    }
-  }, [user]);
-
-  const fetchClinics = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('clinics').select('*').order('created_at', { ascending: false });
-      if (error) throw error;
-      setClinics(data as Clinic[] || []);
-    } catch (error) {
-      console.error('Error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchStats = async () => {
-    try {
-      const [usersRes, appointmentsRes] = await Promise.all([
-        supabase.from('profiles').select('id', { count: 'exact', head: true }),
-        supabase.from('appointments').select('id', { count: 'exact', head: true }),
-      ]);
-      setStats({
-        totalUsers: usersRes.count || 0,
-        totalAppointments: appointmentsRes.count || 0,
-      });
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  };
-
-  const updateClinicStatus = async (clinicId: string, isApproved: boolean) => {
-    try {
-      const { error } = await supabase.from('clinics').update({ is_approved: isApproved }).eq('id', clinicId);
-      if (error) throw error;
-      setClinics(prev => prev.map(c => c.id === clinicId ? { ...c, is_approved: isApproved } : c));
-      toast.success(`Clinic ${isApproved ? 'approved' : 'rejected'}`);
-    } catch {
-      toast.error('Failed to update clinic status');
-    }
+  const updateClinicStatus = (clinicId: string, isApproved: boolean) => {
+    updateApproval.mutate({ clinicId, isApproved });
   };
 
   const filteredClinics = clinics.filter((c) => {
@@ -220,22 +170,5 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
     </Layout>
-  );
-}
-
-function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: number; color: string }) {
-  const colorMap: Record<string, string> = {
-    primary: 'bg-primary/10 text-primary',
-    success: 'bg-success/10 text-success',
-    info: 'bg-info/10 text-info',
-    warning: 'bg-warning/10 text-warning',
-  };
-  return (
-    <Card>
-      <CardContent className="p-4 flex items-center gap-4">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorMap[color]}`}>{icon}</div>
-        <div><p className="text-2xl font-bold">{value}</p><p className="text-sm text-muted-foreground">{label}</p></div>
-      </CardContent>
-    </Card>
   );
 }

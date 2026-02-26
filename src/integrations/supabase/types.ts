@@ -331,6 +331,18 @@ export type Database = {
     }
     Functions: {
       assign_clinic_role: { Args: { _user_id: string }; Returns: undefined }
+      book_appointment: {
+        Args: {
+          _clinic_id: string
+          _slot_id: string
+          _patient_name: string
+          _patient_phone: string
+          _date: string
+          _time: string
+          _notes?: string | null
+        }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -1,17 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/authStore';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { useClinicByOwner } from '@/hooks/queries/useClinics';
+import { useClinicAppointments, useClinicUpcomingAppointments } from '@/hooks/queries/useAppointments';
+import { useAllSlots } from '@/hooks/queries/useSlots';
 import {
   Calendar, Loader2, Building2, Users, Stethoscope, Clock, CalendarCheck,
 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
-import type { Appointment, Clinic, TimeSlot } from '@/types';
 import { ClinicAppointments } from '@/components/clinic-dashboard/ClinicAppointments';
 import { ClinicSlots } from '@/components/clinic-dashboard/ClinicSlots';
 import { ClinicProfileEditor } from '@/components/clinic-dashboard/ClinicProfileEditor';
@@ -19,100 +19,22 @@ import { ClinicDoctors } from '@/components/clinic-dashboard/ClinicDoctors';
 import { ClinicServices } from '@/components/clinic-dashboard/ClinicServices';
 import { ClinicAnalytics } from '@/components/clinic-dashboard/ClinicAnalytics';
 import { ClinicReviews } from '@/components/clinic/ClinicReviews';
+import { StatCard } from '@/components/common/StatCard';
 
 type Tab = 'overview' | 'appointments' | 'slots' | 'doctors' | 'services' | 'analytics' | 'reviews' | 'profile';
 
 export default function ClinicDashboard() {
   const navigate = useNavigate();
   const { user, hasRole, isLoading: authLoading, isInitialized } = useAuthStore();
-  const [clinic, setClinic] = useState<Clinic | null>(null);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
-  const [slots, setSlots] = useState<TimeSlot[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [activeTab, setActiveTab] = useState<Tab>('overview');
 
-  useEffect(() => {
-    if (isInitialized && !authLoading) {
-      if (!user) navigate('/auth');
-      else if (!hasRole('clinic') && !hasRole('admin')) {
-        toast.error('You do not have access to the clinic dashboard');
-        navigate('/');
-      }
-    }
-  }, [user, hasRole, authLoading, isInitialized, navigate]);
-
-  useEffect(() => {
-    if (user && (hasRole('clinic') || hasRole('admin'))) fetchClinicData();
-  }, [user]);
-
-  useEffect(() => {
-    if (clinic) {
-      fetchAppointments();
-      fetchSlots();
-    }
-  }, [clinic, selectedDate]);
-
-  useEffect(() => {
-    if (clinic) fetchAllAppointments();
-  }, [clinic]);
-
-  const fetchClinicData = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('clinics').select('*').eq('owner_id', user?.id).maybeSingle();
-      if (error) throw error;
-      setClinic(data as Clinic);
-    } catch (error) {
-      console.error('Error fetching clinic:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchAppointments = async () => {
-    if (!clinic) return;
-    try {
-      const { data, error } = await supabase
-        .from('appointments').select('*')
-        .eq('clinic_id', clinic.id).eq('date', selectedDate)
-        .order('time');
-      if (error) throw error;
-      setAppointments(data as Appointment[] || []);
-    } catch (error) {
-      console.error('Error fetching appointments:', error);
-    }
-  };
-
-  const fetchAllAppointments = async () => {
-    if (!clinic) return;
-    try {
-      const { data, error } = await supabase
-        .from('appointments').select('*')
-        .eq('clinic_id', clinic.id)
-        .gte('date', format(new Date(), 'yyyy-MM-dd'))
-        .order('date').order('time').limit(50);
-      if (error) throw error;
-      setAllAppointments(data as Appointment[] || []);
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  };
-
-  const fetchSlots = async () => {
-    if (!clinic) return;
-    try {
-      const { data, error } = await supabase
-        .from('time_slots').select('*')
-        .eq('clinic_id', clinic.id).eq('date', selectedDate)
-        .order('start_time');
-      if (error) throw error;
-      setSlots(data as TimeSlot[] || []);
-    } catch (error) {
-      console.error('Error fetching slots:', error);
-    }
-  };
+  const { data: clinic, isLoading, refetch: refetchClinic } = useClinicByOwner(user?.id);
+  const { data: appointments = [], refetch: refetchAppointments } = useClinicAppointments(clinic?.id, selectedDate);
+  const { data: allAppointments = [], refetch: refetchAllAppointments } = useClinicUpcomingAppointments(
+    clinic?.id, format(new Date(), 'yyyy-MM-dd')
+  );
+  const { data: slots = [], refetch: refetchSlots } = useAllSlots(clinic?.id, selectedDate);
 
   const dateOptions = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(new Date(), i);
@@ -229,7 +151,7 @@ export default function ClinicDashboard() {
                   </CardContent>
                 </Card>
               ) : (
-                <ClinicAppointments appointments={todayAppointments.slice(0, 5)} onUpdate={() => { fetchAppointments(); fetchAllAppointments(); }} />
+                <ClinicAppointments appointments={todayAppointments.slice(0, 5)} onUpdate={() => { refetchAppointments(); refetchAllAppointments(); }} />
               )}
             </div>
           </div>
@@ -241,7 +163,7 @@ export default function ClinicDashboard() {
             <h2 className="text-lg font-semibold mb-4">
               Appointments — {format(new Date(selectedDate), 'MMMM d, yyyy')}
             </h2>
-            <ClinicAppointments appointments={appointments} onUpdate={fetchAppointments} />
+            <ClinicAppointments appointments={appointments} onUpdate={refetchAppointments} />
           </div>
         )}
 
@@ -251,7 +173,7 @@ export default function ClinicDashboard() {
             <h2 className="text-lg font-semibold mb-4">
               Time Slots — {format(new Date(selectedDate), 'MMMM d, yyyy')}
             </h2>
-            <ClinicSlots clinicId={clinic.id} slots={slots} selectedDate={selectedDate} onUpdate={fetchSlots} />
+            <ClinicSlots clinicId={clinic.id} slots={slots} selectedDate={selectedDate} onUpdate={refetchSlots} />
           </div>
         )}
 
@@ -289,31 +211,9 @@ export default function ClinicDashboard() {
 
         {/* Profile Tab */}
         {activeTab === 'profile' && (
-          <ClinicProfileEditor clinic={clinic} onUpdate={setClinic} />
+          <ClinicProfileEditor clinic={clinic} onUpdate={() => refetchClinic()} />
         )}
       </div>
     </Layout>
-  );
-}
-
-function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string | number; color: string }) {
-  const colorMap: Record<string, string> = {
-    primary: 'bg-primary/10 text-primary',
-    warning: 'bg-warning/10 text-warning',
-    info: 'bg-info/10 text-info',
-    success: 'bg-success/10 text-success',
-  };
-  return (
-    <Card>
-      <CardContent className="p-4 flex items-center gap-4">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorMap[color]}`}>
-          {icon}
-        </div>
-        <div>
-          <p className="text-2xl font-bold">{value}</p>
-          <p className="text-sm text-muted-foreground">{label}</p>
-        </div>
-      </CardContent>
-    </Card>
   );
 }

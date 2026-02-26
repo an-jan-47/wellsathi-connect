@@ -6,11 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/stores/authStore';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { useUserAppointments, useCancelAppointment } from '@/hooks/queries/useAppointments';
+import { useUpdateProfile } from '@/hooks/queries/useProfile';
 import { Calendar, Clock, MapPin, Loader2, Search, XCircle, User, Phone, Save, Star } from 'lucide-react';
 import { format, parseISO, isPast, isToday } from 'date-fns';
-import type { Appointment, Clinic } from '@/types';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -20,29 +19,19 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { ClinicReviews } from '@/components/clinic/ClinicReviews';
-
-interface AppointmentWithClinic extends Appointment {
-  clinics: Clinic;
-}
+import type { AppointmentWithClinic } from '@/services/appointmentService';
 
 export default function UserDashboard() {
   const navigate = useNavigate();
   const { user, profile, isLoading: authLoading, isInitialized } = useAuthStore();
-  const [appointments, setAppointments] = useState<AppointmentWithClinic[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'appointments' | 'profile'>('appointments');
 
   // Profile editing
   const [profileForm, setProfileForm] = useState({ name: '', phone: '' });
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
-  useEffect(() => {
-    if (isInitialized && !authLoading && !user) navigate('/auth');
-  }, [user, authLoading, isInitialized, navigate]);
-
-  useEffect(() => {
-    if (user) fetchAppointments();
-  }, [user]);
+  const { data: appointments = [], isLoading } = useUserAppointments(user?.id);
+  const cancelMutation = useCancelAppointment();
+  const updateProfileMutation = useUpdateProfile();
 
   useEffect(() => {
     if (profile) {
@@ -50,58 +39,16 @@ export default function UserDashboard() {
     }
   }, [profile]);
 
-  const fetchAppointments = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('appointments')
-        .select('*, clinics(*)')
-        .eq('user_id', user?.id)
-        .order('date', { ascending: false })
-        .order('time', { ascending: true })
-        .limit(50);
-      if (error) throw error;
-      setAppointments(data as AppointmentWithClinic[] || []);
-    } catch (error) {
-      console.error('Error fetching appointments:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const cancelAppointment = (id: string) => {
+    cancelMutation.mutate(id);
   };
 
-  const cancelAppointment = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('appointments')
-        .update({ status: 'cancelled' as const })
-        .eq('id', id);
-      if (error) throw error;
-      toast.success('Appointment cancelled');
-      fetchAppointments();
-    } catch {
-      toast.error('Failed to cancel appointment');
-    }
-  };
-
-  const saveProfile = async () => {
-    if (!profileForm.name.trim()) {
-      toast.error('Name is required');
-      return;
-    }
-    setIsSavingProfile(true);
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ name: profileForm.name.trim(), phone: profileForm.phone.trim() || null })
-        .eq('id', user?.id);
-      if (error) throw error;
-      toast.success('Profile updated');
-      // Refresh auth store
-      if (user) await useAuthStore.getState().fetchUserData(user.id);
-    } catch {
-      toast.error('Failed to update profile');
-    } finally {
-      setIsSavingProfile(false);
-    }
+  const saveProfile = () => {
+    if (!profileForm.name.trim() || !user) return;
+    updateProfileMutation.mutate({
+      userId: user.id,
+      data: { name: profileForm.name.trim(), phone: profileForm.phone.trim() || null },
+    });
   };
 
   const upcomingAppointments = appointments.filter(
@@ -212,8 +159,8 @@ export default function UserDashboard() {
                 <label className="text-sm font-medium mb-2 block">Email</label>
                 <Input value={user?.email || ''} disabled className="bg-muted" />
               </div>
-              <Button onClick={saveProfile} disabled={isSavingProfile}>
-                {isSavingProfile ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+              <Button onClick={saveProfile} disabled={updateProfileMutation.isPending}>
+                {updateProfileMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                 Save Profile
               </Button>
             </CardContent>
