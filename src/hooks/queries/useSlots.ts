@@ -7,6 +7,7 @@ export function useAvailableSlots(clinicId: string | undefined, date: string) {
     queryKey: ['slots', clinicId, date, 'available'],
     queryFn: () => getAvailableSlots(clinicId!, date),
     enabled: !!clinicId && !!date,
+    refetchInterval: 10000, // Auto-refresh every 10s to prevent stale availability
   });
 }
 
@@ -16,5 +17,6 @@ export function useAllSlots(clinicId: string | undefined, date: string) {
     queryKey: ['slots', clinicId, date, 'all'],
     queryFn: () => getAllSlots(clinicId!, date),
     enabled: !!clinicId && !!date,
+    refetchInterval: 10000, // Auto-refresh every 10s
   });
 }

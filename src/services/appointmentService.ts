@@ -80,6 +80,7 @@ export async function cancelAppointment(appointmentId: string) {
 
 /**
  * Book an appointment atomically using the DB function.
+ * Supports doctor selection and multi-service bookings.
  */
 export async function bookAppointment(params: {
   clinicId: string;
@@ -89,6 +90,9 @@ export async function bookAppointment(params: {
   date: string;
   time: string;
   notes?: string | null;
+  doctorId?: string | null;
+  totalFee?: number;
+  serviceIds?: string[];
 }): Promise<string> {
   const { data, error } = await supabase.rpc('book_appointment', {
     _clinic_id: params.clinicId,
@@ -98,8 +102,28 @@ export async function bookAppointment(params: {
     _date: params.date,
     _time: params.time,
     _notes: params.notes || null,
+    _doctor_id: params.doctorId || null,
+    _total_fee: params.totalFee || 0,
   });
 
   if (error) throw error;
-  return data;
+
+  const appointmentId = data as string;
+
+  // Insert booking_services for multi-service support
+  if (params.serviceIds && params.serviceIds.length > 0 && appointmentId) {
+    try {
+      const serviceRows = params.serviceIds.map(serviceId => ({
+        appointment_id: appointmentId,
+        service_id: serviceId,
+        fee: 0, // Fee is tracked per-service but total is on the appointment
+      }));
+      await supabase.from('booking_services').insert(serviceRows);
+    } catch {
+      // Non-critical: don't fail the booking if service linking fails
+      console.warn('Could not link services to booking');
+    }
+  }
+
+  return appointmentId;
 }

@@ -42,6 +42,8 @@ export interface Doctor {
   specialization: string;
   bio: string | null;
   image_url: string | null;
+  experience_years?: number;
+  fee?: number;
   created_at: string;
 }
 
@@ -59,15 +61,25 @@ export interface Appointment {
   id: string;
   clinic_id: string;
   user_id: string | null;
+  doctor_id?: string | null;
   patient_name: string;
   patient_phone: string;
   date: string;
   time: string;
   status: AppointmentStatus;
   notes: string | null;
+  total_fee?: number;
   created_at: string;
   updated_at: string;
   clinic?: Clinic;
+}
+
+export interface BookingService {
+  id: string;
+  appointment_id: string;
+  service_id: string;
+  fee: number;
+  created_at: string;
 }
 
 export interface Review {

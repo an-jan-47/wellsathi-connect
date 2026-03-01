@@ -1,9 +1,12 @@
 /**
  * Consolidated application constants.
  * Single source of truth for specializations, services, and other shared values.
+ * All arrays are pre-sorted alphabetically.
  */
 
-export const SPECIALIZATIONS = [
+import { sortAlpha } from '@/lib/sortUtils';
+
+export const SPECIALIZATIONS = sortAlpha([
   'General Medicine',
   'Pediatrics',
   'Cardiology',
@@ -24,9 +27,9 @@ export const SPECIALIZATIONS = [
   'Pathology',
   'Anesthesiology',
   'Oncology',
-] as const;
+]);
 
-export const SERVICE_OPTIONS = [
+export const SERVICE_OPTIONS = sortAlpha([
   'General Consultation',
   'Follow-up Visit',
   'Health Checkup',
@@ -42,7 +45,7 @@ export const SERVICE_OPTIONS = [
   'Physiotherapy Session',
   'Surgery Consultation',
   'Pediatric Checkup',
-] as const;
+]);
 
 export type SortOption = 'rating' | 'fees_low' | 'fees_high' | 'name';
 
