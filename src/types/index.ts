@@ -89,6 +89,7 @@ export interface Review {
   appointment_id: string | null;
   rating: number;
   comment: string | null;
+  images?: string[] | null;
   created_at: string;
   updated_at: string;
   profiles?: Profile;

@@ -36,11 +36,6 @@ export function useClinicRegistration() {
         email: user.email || '',
         phone: profile?.phone || '',
       }));
-      // Assign clinic role for existing users
-      supabase.from('user_roles').upsert(
-        { user_id: user.id, role: 'clinic' },
-        { onConflict: 'user_id,role' }
-      );
       setCurrentStep(2);
     }
   }, [user, profile]);
@@ -91,12 +86,6 @@ export function useClinicRegistration() {
 
       // Store user ID for file uploads
       setUserId(authData.user.id);
-
-      // Assign clinic role directly
-      await supabase.from('user_roles').upsert(
-        { user_id: authData.user.id, role: 'clinic' },
-        { onConflict: 'user_id,role' }
-      );
 
       // Update form data and move to next step
       setFormData(prev => ({
@@ -176,11 +165,9 @@ export function useClinicRegistration() {
     setIsSubmitting(true);
 
     try {
-      // Create clinic record
-      const { data: clinicData, error: clinicError } = await supabase
-        .from('clinics')
-        .insert({
-          owner_id: userId,
+      // Prepare payload for edge function
+      const payload = {
+        clinicDetails: {
           name: formData.clinicName!,
           address: formData.address!,
           city: formData.city!,
@@ -191,57 +178,32 @@ export function useClinicRegistration() {
           images: formData.clinicImages || [],
           certificates: formData.certificates || [],
           registration_number: formData.registrationNumber,
-          is_approved: false,
-        })
-        .select('id')
-        .single();
+        },
+        doctors: formData.doctors,
+        services: formData.services
+      };
 
-      if (clinicError) {
-        throw clinicError;
-      }
+      // Call secure Edge Function for transaction-like inserting
+      const { data, error: functionError } = await supabase.functions.invoke('register-clinic', {
+        body: payload
+      });
 
-      const clinicId = clinicData.id;
-
-      // Create doctor records
-      if (formData.doctors && formData.doctors.length > 0) {
-        const doctorInserts = formData.doctors.map(doc => ({
-          clinic_id: clinicId,
-          name: doc.name,
-          specialization: doc.specialization,
-          fee: doc.fee || formData.defaultFee || 500,
-        }));
-
-        const { error: doctorError } = await supabase
-          .from('doctors')
-          .insert(doctorInserts);
-
-        if (doctorError) {
-          console.error('Error creating doctors:', doctorError);
+      if (functionError) {
+        let errorMessage = functionError.message || 'Edge Function failed';
+        try {
+          if (functionError.context && typeof functionError.context.json === 'function') {
+            const body = await functionError.context.json();
+            errorMessage = body.error || errorMessage;
+          }
+        } catch (e) {
+          // ignore parsing error
         }
+        throw new Error(errorMessage);
       }
-
-      // Create service records
-      if (formData.services && formData.services.length > 0) {
-        const serviceInserts = formData.services.map(svc => ({
-          clinic_id: clinicId,
-          service_name: svc.serviceName,
-          fee: svc.fee,
-        }));
-
-        const { error: serviceError } = await supabase
-          .from('clinic_services')
-          .insert(serviceInserts);
-
-        if (serviceError) {
-          console.error('Error creating services:', serviceError);
-        }
+      
+      if (data?.error) {
+        throw new Error(data.error);
       }
-
-      // Ensure clinic role is assigned
-      await supabase.from('user_roles').upsert(
-        { user_id: userId, role: 'clinic' },
-        { onConflict: 'user_id,role' }
-      );
 
       setIsSuccess(true);
 

@@ -18,9 +18,9 @@ export function ClinicCard({ clinic }: ClinicCardProps) {
         aria-label={`View ${clinic.name}`}
       >
         <div className="aspect-[16/9] relative bg-muted overflow-hidden">
-          {clinic.image_url ? (
+          {clinic.images && clinic.images.length > 0 ? (
             <img
-              src={clinic.image_url}
+              src={clinic.images[0]}
               alt={clinic.name}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             />

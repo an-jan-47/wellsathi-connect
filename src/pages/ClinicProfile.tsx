@@ -68,8 +68,8 @@ export default function ClinicProfile() {
           </Link>
         </div>
         <div className="h-64 relative bg-muted">
-          {clinic.image_url ? (
-            <img src={clinic.image_url} alt={clinic.name} className="w-full h-full object-cover" />
+          {clinic.images && clinic.images.length > 0 ? (
+            <img src={clinic.images[0]} alt={clinic.name} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full gradient-primary flex items-center justify-center">
               <span className="text-6xl font-bold text-primary-foreground/30">{clinic.name.charAt(0)}</span>

@@ -19,6 +19,7 @@ interface AuthState {
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   updatePassword: (password: string) => Promise<{ error: Error | null }>;
   hasRole: (role: AppRole) => boolean;
+  signInWithGoogle: (redirectTo?: string) => Promise<{ error: Error | null }>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -58,14 +59,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   fetchUserData: async (userId: string) => {
     try {
-      const [profileRes, rolesRes] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
-        supabase.from('user_roles').select('role').eq('user_id', userId),
-      ]);
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      const profile = profileData as Profile | null;
+      // Derive roles strictly from the profiles table.
+      const roles: AppRole[] = profile?.role ? [profile.role] : ['user'];
 
       set({
-        profile: profileRes.data as Profile | null,
-        roles: (rolesRes.data?.map(r => r.role as AppRole) ?? []),
+        profile,
+        roles,
         isLoading: false,
       });
     } catch (error) {
@@ -116,4 +126,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   hasRole: (role) => get().roles.includes(role),
+
+  signInWithGoogle: async (redirectTo?: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectTo || `${window.location.origin}/`,
+        },
+      });
+      
+      if (error) throw error;
+      return { error: null };
+    } catch (error: any) {
+      console.error('Error signing in with Google:', error.message);
+      return { error };
+    }
+  },
 }));

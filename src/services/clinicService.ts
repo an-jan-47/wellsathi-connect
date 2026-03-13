@@ -16,7 +16,7 @@ export interface SearchFilters {
 export async function searchClinics(filters: SearchFilters): Promise<Clinic[]> {
   let query = supabase
     .from('clinics')
-    .select('id, name, city, address, fees, rating, image_url, specializations, phone, is_approved')
+    .select('id, name, city, address, fees, rating, images, specializations, phone, is_approved')
     .eq('is_approved', true)
     .limit(20);
 

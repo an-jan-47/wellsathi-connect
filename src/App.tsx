@@ -68,13 +68,9 @@ function AppContent() {
           <Route path="/auth/reset-password" element={<ResetPassword />} />
           <Route path="/search" element={<Search />} />
           <Route path="/clinic/:id" element={<ClinicProfile />} />
+          <Route path="/register-clinic" element={<ClinicRegistration />} />
 
           {/* Auth required */}
-          <Route path="/register-clinic" element={
-            <ProtectedRoute>
-              <ClinicRegistration />
-            </ProtectedRoute>
-          } />
           <Route path="/book/:clinicId" element={
             <ProtectedRoute>
               <Book />
