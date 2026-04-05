@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ClinicDashboardLayout } from '@/components/layout/ClinicDashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,6 @@ import {
 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { ClinicOverviewStats } from '@/components/clinic-dashboard/ClinicOverviewStats';
-import { ClinicStatusWidget } from '@/components/clinic-dashboard/ClinicStatusWidget';
 import { ClinicAppointments } from '@/components/clinic-dashboard/ClinicAppointments';
 import { ClinicSlots } from '@/components/clinic-dashboard/ClinicSlots';
 import { ClinicSettings } from '@/components/clinic-dashboard/ClinicSettings';
@@ -28,6 +28,13 @@ export default function ClinicDashboard() {
   const { user, hasRole, isLoading: authLoading, isInitialized } = useAuthStore();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [activeTab, setActiveTab] = useState<Tab>((searchParams.get('tab') as Tab) || 'overview');
+
+  const tabTitles: Record<Tab, string> = {
+    overview: 'Dashboard', appointments: 'Appointments', slots: 'Slots',
+    doctors: 'Doctors', services: 'Services', patients: 'Patients',
+    analytics: 'Analytics', reviews: 'Reviews', profile: 'Settings'
+  };
+  useDocumentTitle(`Clinic ${tabTitles[activeTab]}`);
 
   useEffect(() => {
     const tab = searchParams.get('tab') as Tab;

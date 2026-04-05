@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { useAuthStore } from '@/stores/authStore';
@@ -14,7 +15,13 @@ import {
 } from 'lucide-react';
 import { z } from 'zod';
 import { sortAlphaBy } from '@/lib/sortUtils';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 import type { Doctor } from '@/types';
+
+/* Sub-components */
+import { BookingStepBar } from '@/components/booking/BookingStepBar';
+import { BookingSuccess } from '@/components/booking/BookingSuccess';
+import { BookingSidebar } from '@/components/booking/BookingSidebar';
 
 /* ───────────── validation schema ───────────── */
 const patientSchema = z.object({
@@ -32,12 +39,6 @@ interface Service {
 
 type Step = 1 | 2 | 3;
 
-const STEPS = [
-  { num: 1, label: 'Clinic', sublabel: 'Choose Specialist' },
-  { num: 2, label: 'Patient', sublabel: 'Patient Info' },
-  { num: 3, label: 'Payment', sublabel: 'Confirm Booking' },
-] as const;
-
 /* ═══════════════════════════════════════════════ */
 export default function Book() {
   const { clinicId } = useParams<{ clinicId: string }>();
@@ -50,6 +51,8 @@ export default function Book() {
   const doctors = (clinicData?.doctors ?? []) as Doctor[];
   const services = clinicData?.services ?? [];
 
+  useDocumentTitle(clinic ? `Book at ${clinic.name}` : 'Booking');
+
   const sortedDoctors = useMemo(() => sortAlphaBy(doctors, 'name'), [doctors]);
   const sortedServices = useMemo(() => sortAlphaBy(services, 'service_name') as Service[], [services]);
 
@@ -58,7 +61,7 @@ export default function Book() {
   const [bookingRefId, setBookingRefId] = useState('');
 
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>(searchParams.get('doctor') || '');
-  const [selectedServiceId, setSelectedServiceId] = useState<string>('');
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || format(new Date(), 'yyyy-MM-dd'));
   const [selectedTime, setSelectedTime] = useState(searchParams.get('time') || '');
 
@@ -74,14 +77,16 @@ export default function Book() {
         ...prev,
         patientName: prev.patientName || profile.name || '',
         patientPhone: prev.patientPhone || profile.phone || '',
+        patientEmail: prev.patientEmail || user?.email || '',
       }));
     }
   }, [profile]);
 
   const selectedDoctor = sortedDoctors.find(d => d.id === selectedDoctorId);
-  const selectedService = sortedServices.find(s => s.id === selectedServiceId);
+  const selectedServices = sortedServices.filter(s => selectedServiceIds.includes(s.id));
+  const servicesFeeTotal = selectedServices.reduce((acc, s) => acc + s.fee, 0);
   const baseFee = selectedDoctor && (selectedDoctor.fee ?? 0) > 0 ? selectedDoctor.fee! : (clinic?.fees ?? 0);
-  const totalFee = baseFee + (selectedService?.fee ?? 0);
+  const totalFee = baseFee + servicesFeeTotal;
 
   const dateOptions = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(new Date(), i);
@@ -138,6 +143,13 @@ export default function Book() {
 
   const handleConfirm = () => {
     if (!clinicId || !selectedTime || !selectedDoctorId) return;
+
+    // Rate limit: max 5 booking attempts per minute
+    if (!checkRateLimit('book_appointment', RATE_LIMITS.BOOK_APPOINTMENT)) {
+      toast.error('Too many booking attempts. Please wait a moment before trying again.');
+      return;
+    }
+
     bookMutation.mutate({
       clinicId,
       patientName: formData.patientName,
@@ -147,7 +159,7 @@ export default function Book() {
       notes: formData.notes || null,
       doctorId: selectedDoctorId,
       totalFee,
-      serviceIds: selectedServiceId ? [selectedServiceId] : [],
+      serviceIds: selectedServiceIds,
       autoApprove: profile?.role === 'clinic',
     }, {
       onSuccess: (appointmentId) => {
@@ -167,6 +179,7 @@ export default function Book() {
     });
   };
 
+  /* ── Loading / Not found ── */
   if (isLoading) {
     return (
       <Layout>
@@ -193,67 +206,21 @@ export default function Book() {
   /* ── Success Screen ── */
   if (isSuccess) {
     return (
-      <Layout>
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[32px] shadow-xl border border-slate-100 p-10 max-w-md w-full text-center animate-scale-in">
-            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 className="h-10 w-10 text-primary" />
-            </div>
-            <h2 className="text-[28px] font-black text-slate-900 mb-2">Booking Confirmed!</h2>
-            <p className="text-slate-500 font-medium mb-6">Your appointment has been successfully booked.</p>
-            <div className="bg-slate-50 rounded-2xl p-4 mb-6 text-left space-y-3">
-              <div className="flex justify-between text-[14px]"><span className="text-slate-400 font-bold uppercase tracking-wider">Reference</span><span className="font-black text-primary tracking-wider">{bookingRefId}</span></div>
-              <div className="flex justify-between text-[14px]"><span className="text-slate-400 font-bold uppercase tracking-wider">Clinic</span><span className="font-bold text-slate-700">{clinic.name}</span></div>
-              {selectedDoctor && <div className="flex justify-between text-[14px]"><span className="text-slate-400 font-bold uppercase tracking-wider">Doctor</span><span className="font-bold text-slate-700">{selectedDoctor.name}</span></div>}
-              <div className="flex justify-between text-[14px]"><span className="text-slate-400 font-bold uppercase tracking-wider">Date & Time</span><span className="font-bold text-slate-700">{format(parseISO(selectedDate), 'MMM d')} • {selectedTime.slice(0, 5)}</span></div>
-              <div className="flex justify-between text-[14px]"><span className="text-slate-400 font-bold uppercase tracking-wider">Total</span><span className="font-black text-primary text-[16px]">₹{totalFee}</span></div>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => navigate('/dashboard/user')} className="flex-1 border-2 border-slate-200 text-slate-700 font-bold py-3 rounded-xl hover:bg-slate-50 transition-colors">My Appointments</button>
-              <button onClick={() => navigate('/')} className="flex-1 bg-primary text-white font-bold py-3 rounded-xl hover:bg-primary/90 transition-colors shadow-md">Home</button>
-            </div>
-          </div>
-        </div>
-      </Layout>
+      <BookingSuccess
+        clinicName={clinic.name}
+        doctorName={selectedDoctor?.name}
+        date={selectedDate}
+        time={selectedTime}
+        totalFee={totalFee}
+        bookingRefId={bookingRefId}
+      />
     );
   }
-
-  /* ── Booking Summary sidebar data ── */
-  const summaryRows = [
-    { icon: Building2, label: 'CLINIC', value: clinic.name },
-    ...(selectedDoctor ? [{ icon: Stethoscope, label: 'SPECIALIST', value: selectedDoctor.name }] : []),
-    ...(selectedDate && selectedTime ? [{ icon: Calendar, label: 'DATE & TIME', value: `${format(parseISO(selectedDate), 'EEE, d MMM')} • ${selectedTime.slice(0, 5)}` }] : []),
-  ];
 
   return (
     <Layout>
       <div className="min-h-screen bg-slate-50">
-        {/* Step Progress Bar */}
-        <div className="bg-white border-b border-slate-100 shadow-sm">
-          <div className="container max-w-[1100px] py-5">
-            <div className="flex items-center justify-between relative">
-              {/* connector line */}
-              <div className="absolute top-[18px] left-[10%] right-[10%] h-px bg-slate-200 z-0" />
-              <div
-                className="absolute top-[18px] left-[10%] h-[2px] bg-primary z-0 transition-all duration-500"
-                style={{ width: step === 1 ? '0%' : step === 2 ? '40%' : '80%' }}
-              />
-              {STEPS.map((s) => {
-                const isActive = step === s.num;
-                const isDone = step > s.num;
-                return (
-                  <div key={s.num} className="flex flex-col items-center z-10">
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-[15px] transition-all duration-300 border-2 ${isDone ? 'bg-primary border-primary text-white' : isActive ? 'bg-primary border-primary text-white shadow-lg shadow-primary/30' : 'bg-white border-slate-200 text-slate-400'}`}>
-                      {isDone ? <Check className="h-4 w-4" /> : s.num}
-                    </div>
-                    <span className={`text-[11px] font-extrabold uppercase tracking-widest mt-2 ${isActive ? 'text-primary' : isDone ? 'text-slate-500' : 'text-slate-400'}`}>{s.label}</span>
-                    <span className={`text-[10px] font-medium hidden sm:block ${isActive ? 'text-slate-500' : 'text-slate-300'}`}>{s.sublabel}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        <BookingStepBar step={step} />
 
         <div className="container max-w-[1100px] py-8">
           <div className="flex flex-col lg:flex-row gap-8">
@@ -308,14 +275,14 @@ export default function Book() {
                   {/* Service Selection */}
                   {sortedServices.length > 0 && (
                     <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6">
-                      <h2 className="text-[20px] font-black text-slate-900 mb-5">Select Service</h2>
+                      <h2 className="text-[20px] font-black text-slate-900 mb-5">Select Service <span className="text-[13px] text-slate-400 font-medium ml-2">(Optional)</span></h2>
                       <div className="space-y-3">
                         {sortedServices.map(service => {
-                          const isSelected = selectedServiceId === service.id;
+                          const isSelected = selectedServiceIds.includes(service.id);
                           return (
                             <button
                               key={service.id}
-                              onClick={() => setSelectedServiceId(prev => prev === service.id ? '' : service.id)}
+                              onClick={() => setSelectedServiceIds(prev => prev.includes(service.id) ? prev.filter(id => id !== service.id) : [...prev, service.id])}
                               className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all ${isSelected ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-primary/30 bg-slate-50'}`}
                             >
                               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? 'bg-primary border-primary' : 'border-slate-300'}`}>
@@ -323,7 +290,7 @@ export default function Book() {
                               </div>
                               <div className="flex-1">
                                 <p className="font-extrabold text-[15px] text-slate-900">{service.service_name}</p>
-                                <p className="text-[12px] text-slate-400 font-medium mt-0.5">45 min • Quick review</p>
+                                <p className="text-[12px] text-slate-400 font-medium mt-0.5">Quick consultation addition</p>
                               </div>
                               <span className="font-black text-[16px] text-primary shrink-0">₹{service.fee}</span>
                             </button>
@@ -383,9 +350,6 @@ export default function Book() {
                     )}
                   </div>
 
-                  <button onClick={goToStep2} disabled={!canProceedStep1} className="w-full bg-primary disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 text-white font-black text-[16px] py-4 rounded-2xl transition-all shadow-xl shadow-primary/20">
-                    Continue →
-                  </button>
                 </div>
               )}
 
@@ -401,13 +365,7 @@ export default function Book() {
                       <label className="text-[13px] font-extrabold text-slate-700 mb-2 block">Full Name</label>
                       <div className="relative">
                         <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <input
-                          name="patientName"
-                          placeholder="Jonathan Doe"
-                          value={formData.patientName}
-                          onChange={handleChange}
-                          className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-[14px] font-medium text-slate-800 outline-none focus:border-primary transition-colors"
-                        />
+                        <input name="patientName" placeholder="Jonathan Doe" value={formData.patientName} onChange={handleChange} className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-[14px] font-medium text-slate-800 outline-none focus:border-primary transition-colors" />
                       </div>
                       {errors.patientName && <p className="text-[12px] text-red-500 mt-1 font-bold">{errors.patientName}</p>}
                     </div>
@@ -418,13 +376,7 @@ export default function Book() {
                         <label className="text-[13px] font-extrabold text-slate-700 mb-2 block">Phone Number</label>
                         <div className="relative">
                           <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                          <input
-                            name="patientPhone"
-                            placeholder="+1 (555) 000-0000"
-                            value={formData.patientPhone}
-                            onChange={handleChange}
-                            className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-[14px] font-medium text-slate-800 outline-none focus:border-primary transition-colors"
-                          />
+                          <input name="patientPhone" placeholder="+1 (555) 000-0000" value={formData.patientPhone} onChange={handleChange} className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-[14px] font-medium text-slate-800 outline-none focus:border-primary transition-colors" />
                         </div>
                         {errors.patientPhone && <p className="text-[12px] text-red-500 mt-1 font-bold">{errors.patientPhone}</p>}
                       </div>
@@ -432,13 +384,7 @@ export default function Book() {
                         <label className="text-[13px] font-extrabold text-slate-700 mb-2 block">Email Address</label>
                         <div className="relative">
                           <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                          <input
-                            name="patientEmail"
-                            placeholder="clinic@example.com"
-                            value={formData.patientEmail}
-                            onChange={handleChange}
-                            className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-[14px] font-medium text-slate-800 outline-none focus:border-primary transition-colors"
-                          />
+                          <input name="patientEmail" placeholder="clinic@example.com" value={formData.patientEmail} onChange={handleChange} className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-[14px] font-medium text-slate-800 outline-none focus:border-primary transition-colors" />
                         </div>
                       </div>
                     </div>
@@ -446,14 +392,7 @@ export default function Book() {
                     {/* Notes */}
                     <div>
                       <label className="text-[13px] font-extrabold text-slate-700 mb-2 block">Additional Notes <span className="text-slate-400 font-medium">(Optional)</span></label>
-                      <textarea
-                        name="notes"
-                        rows={4}
-                        placeholder="Any symptoms or specific requests for the clinic..."
-                        value={formData.notes}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-[14px] font-medium text-slate-800 outline-none focus:border-primary transition-colors resize-none"
-                      />
+                      <textarea name="notes" rows={4} placeholder="Any symptoms or specific requests for the clinic..." value={formData.notes} onChange={handleChange} className="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-[14px] font-medium text-slate-800 outline-none focus:border-primary transition-colors resize-none" />
                     </div>
 
                     {/* Privacy notice */}
@@ -541,8 +480,8 @@ export default function Book() {
                         <span className="font-bold text-slate-800">₹{baseFee}</span>
                       </div>
                       <div className="flex justify-between text-[14px]">
-                        <span className="font-medium text-slate-500">Service Fee</span>
-                        <span className="font-bold text-slate-800">₹{selectedService?.fee ?? 0}</span>
+                        <span className="font-medium text-slate-500">Service(s) Fee</span>
+                        <span className="font-bold text-slate-800">₹{servicesFeeTotal}</span>
                       </div>
                       <div className="flex justify-between text-[14px]">
                         <span className="font-medium text-slate-500">Clinic Charges</span>
@@ -610,94 +549,23 @@ export default function Book() {
             </div>
 
             {/* ─── BOOKING SUMMARY SIDEBAR ─── */}
-            <div className="w-full lg:w-[300px] shrink-0">
-              <div className="sticky top-24">
-                <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
-                  <div className="bg-primary/5 px-6 py-5 border-b border-primary/10">
-                    <h3 className="text-[16px] font-black text-slate-900">Booking Summary</h3>
-                  </div>
-                  <div className="p-6 space-y-4">
-
-                    {/* Clinic */}
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                        <Building2 className="w-4 h-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-0.5">Clinic</p>
-                        <p className="text-[13px] font-bold text-slate-800">{clinic.name}</p>
-                        {clinic.city && <p className="text-[11px] text-slate-400 font-medium">{clinic.city}</p>}
-                      </div>
-                    </div>
-
-                    {/* Doctor */}
-                    {selectedDoctor && (
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <Stethoscope className="w-4 h-4 text-primary" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-0.5">Specialist</p>
-                          <p className="text-[13px] font-bold text-slate-800">{selectedDoctor.name}</p>
-                          <p className="text-[11px] text-slate-400 font-medium">{selectedDoctor.specialization}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Date & Time */}
-                    {selectedDate && (
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <Calendar className="w-4 h-4 text-primary" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-0.5">Date & Time</p>
-                          <p className="text-[13px] font-bold text-slate-800">{format(parseISO(selectedDate), 'EEE, d MMM yyyy')}</p>
-                          <p className="text-[11px] text-primary font-extrabold">{selectedTime ? selectedTime.slice(0, 5) : 'No slot selected'}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Patient info (step 2+) */}
-                    {step >= 2 && formData.patientName && (
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <User className="w-4 h-4 text-primary" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-0.5">Patient</p>
-                          <p className="text-[13px] font-bold text-slate-800">{formData.patientName}</p>
-                          {formData.patientPhone && <p className="text-[11px] text-slate-400 font-medium">{formData.patientPhone}</p>}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="border-t border-slate-100 pt-4 space-y-2">
-                      <div className="flex justify-between text-[13px]">
-                        <span className="text-slate-500 font-medium">Consultation</span>
-                        <span className="font-bold text-slate-700">₹{baseFee}</span>
-                      </div>
-                      {selectedService && (
-                        <div className="flex justify-between text-[13px]">
-                          <span className="text-slate-500 font-medium">{selectedService.service_name}</span>
-                          <span className="font-bold text-slate-700">₹{selectedService.fee}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                        <span className="text-[13px] font-bold text-slate-500">Total Fee</span>
-                        <span className="text-[22px] font-black text-primary">₹{totalFee}.00</span>
-                      </div>
-                    </div>
-
-                    {step === 1 && (
-                      <button onClick={goToStep2} disabled={!canProceedStep1} className="w-full bg-primary disabled:opacity-50 hover:bg-primary/90 text-white font-black py-3.5 rounded-xl transition-all shadow-md shadow-primary/20 text-[14px]">
-                        Confirm Booking
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
+            {step === 1 && (
+              <BookingSidebar
+                step={step}
+                clinicName={clinic.name}
+                clinicCity={clinic.city}
+                selectedDoctor={selectedDoctor}
+                selectedDate={selectedDate}
+                selectedTime={selectedTime}
+                selectedService={selectedServices[0]}
+                baseFee={baseFee}
+                totalFee={totalFee}
+                patientName={formData.patientName}
+                patientPhone={formData.patientPhone}
+                canProceed={!!canProceedStep1}
+                onProceed={goToStep2}
+              />
+            )}
 
           </div>
         </div>

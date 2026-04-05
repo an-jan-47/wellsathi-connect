@@ -383,6 +383,92 @@ export type Database = {
           },
         ]
       }
+      booking_services: {
+        Row: {
+          id: string
+          appointment_id: string
+          service_id: string
+          fee: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          appointment_id: string
+          service_id: string
+          fee?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          appointment_id?: string
+          service_id?: string
+          fee?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_services_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clinic_patients: {
+        Row: {
+          id: string
+          clinic_id: string
+          full_name: string
+          phone: string | null
+          email: string | null
+          condition: string | null
+          status: string | null
+          deleted_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          full_name: string
+          phone?: string | null
+          email?: string | null
+          condition?: string | null
+          status?: string | null
+          deleted_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          clinic_id?: string
+          full_name?: string
+          phone?: string | null
+          email?: string | null
+          condition?: string | null
+          status?: string | null
+          deleted_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_patients_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
 
     }
     Views: {
@@ -399,8 +485,21 @@ export type Database = {
           _date: string
           _time: string
           _notes?: string | null
+          _doctor_id?: string | null
+          _total_fee?: number
         }
         Returns: string
+      }
+      cancel_appointment: {
+        Args: { _appointment_id: string }
+        Returns: undefined
+      }
+      update_appointment_status: {
+        Args: {
+          _appointment_id: string
+          _new_status: string
+        }
+        Returns: undefined
       }
       has_role: {
         Args: {
@@ -420,6 +519,20 @@ export type Database = {
           is_available: boolean,
         }[],
       },
+      get_clinic_review_stats: {
+        Args: { p_clinic_id: string }
+        Returns: Json
+      }
+      get_clinic_patients_list: {
+        Args: {
+          p_clinic_id: string
+          p_search?: string | null
+          p_status?: string | null
+          p_limit?: number
+          p_offset?: number
+        }
+        Returns: Json
+      }
       owns_clinic: {
         Args: { _clinic_id: string; _user_id: string }
         Returns: boolean

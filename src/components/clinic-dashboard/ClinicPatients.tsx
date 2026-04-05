@@ -62,7 +62,7 @@ export function ClinicPatients({ clinicId }: Props) {
   useEffect(() => {
     if (!clinicId) return;
     const channel = supabase.channel('patients-sync')
-      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'clinic_patients', filter: `clinic_id=eq.${clinicId}` }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'clinic_patients', filter: `clinic_id=eq.${clinicId}` }, () => {
         queryClient.invalidateQueries({ queryKey: ['clinic_patients', clinicId] });
         queryClient.invalidateQueries({ queryKey: ['clinic_stats', clinicId] });
       })
@@ -74,11 +74,12 @@ export function ClinicPatients({ clinicId }: Props) {
     queryKey: ['clinic_patients', clinicId, debouncedSearch, activeFilter, page, pageSize],
     queryFn: async () => {
       const statusQuery = activeFilter === 'All Patients' ? 'All Patients' : activeFilter.toLowerCase();
-      const { data, error } = await (supabase.rpc as any)('get_clinic_patients_list', {
+      const { data, error } = await supabase.rpc('get_clinic_patients_list', {
         p_clinic_id: clinicId, p_search: debouncedSearch, p_status: statusQuery, p_limit: pageSize, p_offset: (page - 1) * pageSize
       });
       if (error) throw error;
-      return { data, totalCount: data?.[0]?.total_count || 0 };
+      const rows = (data as any[] | null) || [];
+      return { data: rows, totalCount: rows[0]?.total_count || 0 };
     },
     enabled: !!clinicId,
   });
@@ -87,8 +88,8 @@ export function ClinicPatients({ clinicId }: Props) {
     queryKey: ['clinic_stats', clinicId],
     queryFn: async () => {
       const [weeklyRes, reviewsRes] = await Promise.all([
-        (supabase.from as any)('clinic_patients').select('id', { count: 'exact', head: true }).eq('clinic_id', clinicId).gte('created_at', format(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), "yyyy-MM-dd'T'HH:mm:ss'Z'")),
-        (supabase.from as any)('reviews').select('rating').eq('clinic_id', clinicId)
+        supabase.from('clinic_patients').select('id', { count: 'exact', head: true }).eq('clinic_id', clinicId).gte('created_at', format(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), "yyyy-MM-dd'T'HH:mm:ss'Z'")),
+        supabase.from('reviews').select('rating').eq('clinic_id', clinicId)
       ]);
       let avgRating = 0;
       if (reviewsRes.data && reviewsRes.data.length > 0) {
@@ -103,10 +104,10 @@ export function ClinicPatients({ clinicId }: Props) {
   const saveMutation = useMutation({
     mutationFn: async (data: PatientForm) => {
       if (editPatientId) {
-         const { error } = await (supabase.from as any)('clinic_patients').update(data).eq('id', editPatientId);
+         const { error } = await supabase.from('clinic_patients').update(data).eq('id', editPatientId);
          if (error) throw error;
       } else {
-         const { error } = await (supabase.from as any)('clinic_patients').insert({ clinic_id: clinicId, ...data });
+         const { error } = await supabase.from('clinic_patients').insert({ clinic_id: clinicId, full_name: data.full_name!, phone: data.phone, email: data.email, condition: data.condition, status: data.status });
          if (error) throw error;
       }
     },
@@ -121,7 +122,7 @@ export function ClinicPatients({ clinicId }: Props) {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase.from as any)('clinic_patients').update({ deleted_at: new Date().toISOString() }).eq('id', id);
+      const { error } = await supabase.from('clinic_patients').update({ deleted_at: new Date().toISOString() }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => { 
@@ -133,7 +134,7 @@ export function ClinicPatients({ clinicId }: Props) {
   });
 
   const openAddModal = () => { setEditPatientId(null); reset({ full_name: '', phone: '', email: '', condition: '', status: 'new' }); setIsAddOpen(true); };
-  const openEditModal = (p: any) => { setEditPatientId(p.id); reset({ full_name: p.full_name, phone: p.phone || '', email: p.email || '', condition: p.condition || '', status: p.status as any }); setIsAddOpen(true); };
+  const openEditModal = (p: any) => { setEditPatientId(p.id); reset({ full_name: p.full_name, phone: p.phone || '', email: p.email || '', condition: p.condition || '', status: p.status }); setIsAddOpen(true); };
   const closeModal = () => { setIsAddOpen(false); setTimeout(reset, 200); };
 
   const exportToCSV = () => {

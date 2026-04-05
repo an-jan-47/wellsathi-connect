@@ -35,9 +35,10 @@ export function ClinicReviews({ clinicId }: Props) {
   const { data: stats } = useQuery({
      queryKey: ['review_stats', clinicId],
      queryFn: async () => {
-       const { data, error } = await (supabase.rpc as any)('get_clinic_review_stats', { p_clinic_id: clinicId });
+       const { data, error } = await supabase.rpc('get_clinic_review_stats', { p_clinic_id: clinicId });
        if (error) throw error;
-       return data?.[0] || { total_reviews: 0, average_rating: 0, positive_sentiment_percent: 0, response_rate_percent: 0 };
+       const rows = data as any[] | null;
+       return rows?.[0] || { total_reviews: 0, average_rating: 0, positive_sentiment_percent: 0, response_rate_percent: 0 };
      },
      enabled: !!clinicId
   });
@@ -46,7 +47,7 @@ export function ClinicReviews({ clinicId }: Props) {
   const { data: reviews, isLoading } = useQuery({
     queryKey: ['clinic_reviews', clinicId, activeFilter, sortBy],
     queryFn: async () => {
-       let q = (supabase.from as any)('reviews').select('*, profiles:user_id(name)').eq('clinic_id', clinicId);
+       let q = supabase.from('reviews').select('*, profiles:user_id(name)').eq('clinic_id', clinicId);
 
        if (activeFilter === '5 Stars') q = q.eq('rating', 5);
        else if (activeFilter === '4 Stars') q = q.eq('rating', 4);
@@ -67,7 +68,7 @@ export function ClinicReviews({ clinicId }: Props) {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string, updates: any }) => {
-       const { error } = await (supabase.from as any)('reviews').update(updates).eq('id', id);
+       const { error } = await supabase.from('reviews').update(updates).eq('id', id);
        if (error) throw error;
     },
     onSuccess: () => {

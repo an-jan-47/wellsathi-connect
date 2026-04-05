@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
 import { Loader2, Building2 } from 'lucide-react';
 import { z } from 'zod';
+import { checkRateLimit, getRateLimitCooldown, RATE_LIMITS } from '@/lib/rateLimit';
 
 const signInSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -27,6 +29,8 @@ export default function Auth() {
   const [mode, setMode] = useState<'signin' | 'signup'>(
     searchParams.get('mode') === 'signup' ? 'signup' : 'signin'
   );
+
+  useDocumentTitle(mode === 'signup' ? 'Create Account' : 'Sign In');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -58,6 +62,13 @@ export default function Auth() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
+
+    // Rate limit: max 5 auth attempts per 2 minutes
+    if (!checkRateLimit('auth_attempt', RATE_LIMITS.AUTH)) {
+      const cooldown = getRateLimitCooldown('auth_attempt', RATE_LIMITS.AUTH);
+      toast.error(`Too many attempts. Please wait ${cooldown}s before trying again.`);
+      return;
+    }
 
     try {
       if (mode === 'signin') {

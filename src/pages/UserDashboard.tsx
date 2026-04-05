@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { useAuthStore } from '@/stores/authStore';
@@ -26,6 +27,8 @@ export default function UserDashboard() {
   const { user, profile, isLoading: authLoading, isInitialized } = useAuthStore();
   const initialTab = searchParams.get('tab') === 'profile' ? 'profile' : 'appointments';
   const [activeTab, setActiveTab] = useState<'appointments' | 'profile'>(initialTab);
+
+  useDocumentTitle(activeTab === 'profile' ? 'My Profile' : 'My Appointments');
 
   // Sync tab with URL params reactively (so header profile link works)
   useEffect(() => {

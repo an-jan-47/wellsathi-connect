@@ -5,14 +5,9 @@ export interface Profile {
   id: string;
   name: string;
   phone: string | null;
+  role: AppRole;
   created_at: string;
   updated_at: string;
-}
-
-export interface UserRole {
-  id: string;
-  user_id: string;
-  role: AppRole;
 }
 
 export interface Clinic {
@@ -44,6 +39,7 @@ export interface Doctor {
   image_url: string | null;
   experience_years?: number;
   fee?: number;
+  email_id?: string | null;
   created_at: string;
 }
 

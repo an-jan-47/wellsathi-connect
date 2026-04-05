@@ -8,53 +8,68 @@ export interface SearchFilters {
   maxFees?: string;
   minRating?: string;
   sortBy?: SortOption;
+  query?: string;
+  page?: number;
 }
 
 /**
  * Search for approved clinics with filtering and sorting.
  */
 export async function searchClinics(filters: SearchFilters): Promise<Clinic[]> {
-  let query = supabase
+  const page = filters.page || 1;
+  const pageSize = 20;
+  const from = (page - 1) * pageSize;
+  const to = page * pageSize - 1;
+
+  let queryBuilder = supabase
     .from('clinics')
-    .select('id, name, city, address, fees, rating, images, specializations, phone, is_approved')
+    .select('id, name, city, address, fees, rating, images, specializations, phone, is_approved', { count: 'exact' })
     .eq('is_approved', true)
-    .limit(20);
+    .range(from, to);
+
+  if (filters.query) {
+    // Lookup by clinic name OR city match
+    queryBuilder = queryBuilder.or(`name.ilike.%${filters.query}%,city.ilike.%${filters.query}%`);
+  }
 
   if (filters.location) {
-    query = query.ilike('city', `%${filters.location}%`);
+    queryBuilder = queryBuilder.ilike('city', `%${filters.location}%`);
   }
 
   if (filters.specialty) {
-    query = query.contains('specializations', [filters.specialty]);
+    queryBuilder = queryBuilder.contains('specializations', [filters.specialty]);
   }
 
   if (filters.maxFees) {
-    query = query.lte('fees', parseInt(filters.maxFees));
+    queryBuilder = queryBuilder.lte('fees', parseInt(filters.maxFees));
   }
 
   if (filters.minRating) {
-    query = query.gte('rating', parseFloat(filters.minRating));
+    queryBuilder = queryBuilder.gte('rating', parseFloat(filters.minRating));
   }
 
   const sortBy = filters.sortBy || 'rating';
   switch (sortBy) {
     case 'fees_low':
-      query = query.order('fees', { ascending: true });
+      queryBuilder = queryBuilder.order('fees', { ascending: true });
       break;
     case 'fees_high':
-      query = query.order('fees', { ascending: false });
+      queryBuilder = queryBuilder.order('fees', { ascending: false });
       break;
     case 'name':
-      query = query.order('name', { ascending: true });
+      queryBuilder = queryBuilder.order('name', { ascending: true });
       break;
     case 'rating':
     default:
-      query = query.order('rating', { ascending: false, nullsFirst: false });
+      queryBuilder = queryBuilder.order('rating', { ascending: false, nullsFirst: false });
       break;
   }
 
-  const { data, error } = await query;
+  const { data, error } = await queryBuilder;
   if (error) throw error;
+  
+  // NOTE: If we wanted to parse total count, we'd change return signature. 
+  // For now we map it directly to Clinic[] smoothly so React Query doesn't break other components.
   return (data as Clinic[]) || [];
 }
 
@@ -122,6 +137,40 @@ export async function getAllClinics(): Promise<Clinic[]> {
     .from('clinics')
     .select('*')
     .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data as Clinic[]) || [];
+}
+
+/**
+ * Fetch unique cities containing active clinics for search autocomplete.
+ */
+export async function getUniqueCities(): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('clinics')
+    .select('city')
+    .eq('is_approved', true);
+    
+  if (error) throw error;
+  
+  const cities = data.map((c) => c.city?.trim()).filter(Boolean);
+  const uniqueCities = Array.from(
+    new Map(cities.map((c) => [c.toLowerCase(), c])).values()
+  );
+  return uniqueCities.sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Fetch popular top-rated clinics.
+ */
+export async function getPopularClinics(limit = 4): Promise<Clinic[]> {
+  const { data, error } = await supabase
+    .from('clinics')
+    .select('*')
+    .eq('is_approved', true)
+    .not('rating', 'is', null)
+    .order('rating', { ascending: false })
+    .limit(limit);
+    
   if (error) throw error;
   return (data as Clinic[]) || [];
 }

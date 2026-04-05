@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Appointment } from '@/types';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 
 export interface AppointmentWithClinic extends Appointment {
   clinics: {
@@ -31,7 +32,7 @@ export async function getUserAppointments(userId: string): Promise<AppointmentWi
  * Fetch appointments for a clinic on a specific date.
  */
 export async function getClinicAppointments(clinicId: string, date: string): Promise<Appointment[]> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('appointments')
     .select(`
       *,
@@ -52,7 +53,7 @@ export async function getClinicAppointments(clinicId: string, date: string): Pro
  * Fetch upcoming appointments for a clinic.
  */
 export async function getClinicUpcomingAppointments(clinicId: string, fromDate: string): Promise<Appointment[]> {
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('appointments')
     .select(`
       *,
@@ -72,27 +73,34 @@ export async function getClinicUpcomingAppointments(clinicId: string, fromDate: 
 }
 
 /**
- * Cancel an appointment atomically.
+ * Cancel an appointment atomically via secure RPC.
+ * The RPC validates that the caller is the patient or clinic owner.
  */
 export async function cancelAppointment(appointmentId: string) {
-  const { error } = await supabase
-    .from('appointments')
-    .update({ status: 'cancelled' })
-    .eq('id', appointmentId);
+  if (!checkRateLimit('cancel_appointment', RATE_LIMITS.STATUS_UPDATE)) {
+    throw new Error('Too many requests. Please wait before trying again.');
+  }
+  const { error } = await supabase.rpc('cancel_appointment', {
+    _appointment_id: appointmentId,
+  });
   if (error) throw error;
 }
 
 /**
- * Update appointment status — confirm or reject.
+ * Update appointment status (confirm or cancel) via secure RPC.
+ * The RPC validates that the caller is the clinic owner.
  */
 export async function updateAppointmentStatus(
   appointmentId: string,
   status: 'confirmed' | 'cancelled'
 ) {
-  const { error } = await supabase
-    .from('appointments')
-    .update({ status })
-    .eq('id', appointmentId);
+  if (!checkRateLimit('update_status', RATE_LIMITS.STATUS_UPDATE)) {
+    throw new Error('Too many requests. Please wait before trying again.');
+  }
+  const { error } = await supabase.rpc('update_appointment_status', {
+    _appointment_id: appointmentId,
+    _new_status: status,
+  });
   if (error) throw error;
 }
 
@@ -135,7 +143,7 @@ export async function bookAppointment(params: {
         service_id: serviceId,
         fee: 0,
       }));
-      await (supabase as any).from('booking_services').insert(serviceRows);     
+      await supabase.from('booking_services').insert(serviceRows);     
     } catch {
       console.warn('Could not link services to booking');
     }

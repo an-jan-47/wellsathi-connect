@@ -239,7 +239,7 @@ export function ClinicDoctors({ clinicId }: Props) {
             <div className="mb-5">
               <div className="relative inline-block mb-4">
                 {doc.image_url ? (
-                  <img src={doc.image_url} alt={doc.name} className="w-16 h-16 rounded-2xl object-cover bg-slate-100 shadow-sm" />
+                  <img src={doc.image_url} alt={doc.name} loading="lazy" decoding="async" className="w-16 h-16 rounded-2xl object-cover bg-slate-100 shadow-sm" />
                 ) : (
                   <div className="w-16 h-16 rounded-2xl bg-slate-100 overflow-hidden flex items-center justify-center">
                      <span className="text-2xl font-black text-slate-400">{doc.name.charAt(0).toUpperCase()}</span>
