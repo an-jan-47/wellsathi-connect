@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getUserAppointments, getClinicAppointments, getClinicUpcomingAppointments,
-  cancelAppointment, bookAppointment, updateAppointmentStatus,
+  cancelAppointment, bookAppointment, updateAppointmentStatus, rescheduleAppointment,
 } from '@/services/appointmentService';
 import { toast } from 'sonner';
 
@@ -56,6 +56,25 @@ export function useBookAppointment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['slots'] });
+    },
+  });
+}
+
+/** Reschedule appointment (atomic cancel + rebook). */
+export function useRescheduleAppointment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: rescheduleAppointment,
+    onSuccess: () => {
+      toast.success('Appointment rescheduled successfully');
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['slots'] });
+    },
+    onError: (error: Error) => {
+      const msg = error.message?.includes('no longer available')
+        ? 'That slot was just booked. Please choose another.'
+        : 'Failed to reschedule. Please try again.';
+      toast.error(msg);
     },
   });
 }

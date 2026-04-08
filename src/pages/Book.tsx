@@ -254,9 +254,7 @@ export default function Book() {
                               onClick={() => { setSelectedDoctorId(doctor.id); setSelectedTime(''); }}
                               className={`flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all group ${isSelected ? 'border-primary bg-primary/5 shadow-md shadow-primary/10' : 'border-slate-100 hover:border-primary/40 bg-slate-50 hover:bg-white'}`}
                             >
-                              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${isSelected ? 'bg-primary' : 'bg-slate-200 group-hover:bg-primary/20'} transition-colors`}>
-                                <span className={`text-[20px] font-black ${isSelected ? 'text-white' : 'text-slate-500'}`}>{doctor.name.charAt(0)}</span>
-                              </div>
+
                               <div className="flex-1 min-w-0">
                                 <p className={`font-extrabold text-[15px] truncate ${isSelected ? 'text-primary' : 'text-slate-900'}`}>{doctor.name}</p>
                                 <p className="text-[13px] font-medium text-slate-500">{doctor.specialization}</p>
@@ -285,8 +283,8 @@ export default function Book() {
                               onClick={() => setSelectedServiceIds(prev => prev.includes(service.id) ? prev.filter(id => id !== service.id) : [...prev, service.id])}
                               className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all ${isSelected ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-primary/30 bg-slate-50'}`}
                             >
-                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? 'bg-primary border-primary' : 'border-slate-300'}`}>
-                                {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                              <div className={`w-5 h-5 rounded-[6px] border-2 flex items-center justify-center shrink-0 transition-all ${isSelected ? 'bg-primary border-primary shadow-sm' : 'border-slate-300 bg-white'}`}>
+                                {isSelected && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
                               </div>
                               <div className="flex-1">
                                 <p className="font-extrabold text-[15px] text-slate-900">{service.service_name}</p>
@@ -404,11 +402,11 @@ export default function Book() {
                     </div>
                   </div>
 
-                  <div className="flex gap-4">
-                    <button onClick={() => setStep(1)} className="flex-1 border-2 border-slate-200 text-slate-700 font-bold py-4 rounded-2xl hover:bg-slate-50 transition-colors">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                    <button onClick={() => setStep(1)} className="flex-1 border-2 border-slate-200 text-slate-700 font-bold py-3.5 sm:py-4 rounded-2xl hover:bg-slate-50 transition-colors text-[14px] sm:text-base">
                       ← Back to Selection
                     </button>
-                    <button onClick={goToStep3} className="flex-1 bg-primary hover:bg-primary/90 text-white font-black text-[15px] py-4 rounded-2xl shadow-xl shadow-primary/20 transition-all">
+                    <button onClick={goToStep3} className="flex-1 bg-primary hover:bg-primary/90 text-white font-black text-[14px] sm:text-[15px] py-3.5 sm:py-4 rounded-2xl shadow-xl shadow-primary/20 transition-all">
                       Continue to Payment →
                     </button>
                   </div>
@@ -451,7 +449,7 @@ export default function Book() {
                         <Edit2 className="w-3.5 h-3.5" /> Edit
                       </button>
                     </div>
-                    <div className="grid grid-cols-2 gap-6 text-[14px]">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 text-[14px]">
                       <div>
                         <p className="text-slate-400 font-bold text-[11px] uppercase tracking-widest mb-1">Full Name</p>
                         <p className="font-bold text-slate-800">{formData.patientName}</p>
@@ -531,14 +529,14 @@ export default function Book() {
                     </p>
                   </div>
 
-                  <div className="flex gap-4">
-                    <button onClick={() => setStep(2)} className="flex-1 border-2 border-slate-200 text-slate-700 font-bold py-4 rounded-2xl hover:bg-slate-50 transition-colors">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                    <button onClick={() => setStep(2)} className="flex-1 border-2 border-slate-200 text-slate-700 font-bold py-3.5 sm:py-4 rounded-2xl hover:bg-slate-50 transition-colors text-[14px] sm:text-base">
                       ← Back
                     </button>
                     <button
                       disabled={bookMutation.isPending}
                       onClick={handleConfirm}
-                      className="flex-1 bg-primary hover:bg-primary/90 disabled:opacity-70 text-white font-black text-[15px] py-4 rounded-2xl shadow-xl shadow-primary/20 transition-all flex items-center justify-center gap-2"
+                      className="flex-1 bg-primary hover:bg-primary/90 disabled:opacity-70 text-white font-black text-[14px] sm:text-[15px] py-3.5 sm:py-4 rounded-2xl shadow-xl shadow-primary/20 transition-all flex items-center justify-center gap-2"
                     >
                       {bookMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />}
                       Confirm Booking

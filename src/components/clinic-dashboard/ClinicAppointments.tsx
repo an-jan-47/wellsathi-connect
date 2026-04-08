@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { updateAppointmentStatus } from '@/services/appointmentService';
 import { toast } from 'sonner';
-import { User, Phone, Clock, Calendar, CheckCircle2, XCircle, FileText, Loader2, CalendarX, Stethoscope, Activity } from 'lucide-react';
+import { User, Phone, Clock, Calendar, CheckCircle2, XCircle, FileText, Loader2, CalendarX, Stethoscope, Activity, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import {
@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { RescheduleDialog } from '@/components/booking/RescheduleDialog';
 import type { Appointment } from '@/types';
 
 interface Props {
@@ -30,6 +31,7 @@ interface Props {
 export function ClinicAppointments({ appointments, onUpdate, onViewSchedule, date }: Props) {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [selectedAppt, setSelectedAppt] = useState<Appointment | null>(null);
+  const [rescheduleAppt, setRescheduleAppt] = useState<Appointment | null>(null);
   const navigate = useNavigate();
 
   const handleStatusChange = async (id: string, status: 'confirmed' | 'cancelled') => {
@@ -192,6 +194,20 @@ export function ClinicAppointments({ appointments, onUpdate, onViewSchedule, dat
                       </>
                     )}
 
+                    {/* Reschedule — for pending and confirmed */}
+                    {(apt.status === 'pending' || apt.status === 'confirmed') && apt.doctor_id && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-primary border-primary/30 hover:bg-primary/5 rounded-xl px-4 font-bold"
+                        disabled={updatingId === apt.id}
+                        onClick={(e) => { e.stopPropagation(); setRescheduleAppt(apt); }}
+                      >
+                        <RefreshCw className="h-4 w-4 mr-1.5" />
+                        Reschedule
+                      </Button>
+                    )}
+
                     {/* Confirmed → Cancel option */}
                     {apt.status === 'confirmed' && (
                       <AlertDialog>
@@ -350,6 +366,16 @@ export function ClinicAppointments({ appointments, onUpdate, onViewSchedule, dat
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Reschedule Dialog */}
+      {rescheduleAppt && (
+        <RescheduleDialog
+          appointment={rescheduleAppt}
+          open={!!rescheduleAppt}
+          onOpenChange={(open) => { if (!open) setRescheduleAppt(null); }}
+          onSuccess={() => { setRescheduleAppt(null); onUpdate(); }}
+        />
+      )}
     </div>
   );
 }

@@ -155,3 +155,30 @@ export async function bookAppointment(params: {
 
   return appointmentId;
 }
+
+/**
+ * Reschedule an appointment atomically via secure RPC.
+ * The RPC cancels the old appointment and creates a new one in a single transaction.
+ * Old slot is automatically freed since get_doctor_slots ignores cancelled appointments.
+ */
+export async function rescheduleAppointment(params: {
+  appointmentId: string;
+  newDoctorId: string;
+  newDate: string;
+  newTime: string;
+}): Promise<string> {
+  if (!checkRateLimit('reschedule_appointment', RATE_LIMITS.STATUS_UPDATE)) {
+    throw new Error('Too many requests. Please wait before trying again.');
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)('reschedule_appointment', {
+    _appointment_id: params.appointmentId,
+    _new_doctor_id: params.newDoctorId,
+    _new_date: params.newDate,
+    _new_time: params.newTime,
+  });
+
+  if (error) throw error;
+  return data as unknown as string;
+}

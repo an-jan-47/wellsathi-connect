@@ -120,7 +120,7 @@ export function HeroSection() {
   );
 
   return (
-    <section className="relative bg-white pt-24 pb-16 md:pt-32 md:pb-24">
+    <section className="relative bg-white pt-24 pb-16 md:pt-32 md:pb-24 min-h-[520px] md:min-h-[600px]">
       {/* Subtle radial background matching the design */}
       <div className="absolute inset-0 top-0 w-full h-[600px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-100/50 via-white to-white pointer-events-none"></div>
 
