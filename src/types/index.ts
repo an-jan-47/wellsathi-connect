@@ -5,6 +5,15 @@ export interface Profile {
   id: string;
   name: string;
   phone: string | null;
+  gender: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null;
+  age: number | null;
+  address: {
+    street?: string;
+    city?: string;
+    state?: string;
+    postal_code?: string;
+    country?: string;
+  } | null;
   role: AppRole;
   created_at: string;
   updated_at: string;

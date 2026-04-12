@@ -7,7 +7,7 @@ import { useUserAppointments, useCancelAppointment } from '@/hooks/queries/useAp
 import { useUpdateProfile } from '@/hooks/queries/useProfile';
 import {
   Calendar, Clock, MapPin, Loader2, Search, XCircle, User, Phone, Save,
-  Star, Bell, ChevronRight, Building2, RefreshCw
+  Star, Bell, ChevronRight, Building2, RefreshCw, Users, MapPinIcon
 } from 'lucide-react';
 import { format, parseISO, isPast, isToday } from 'date-fns';
 import {
@@ -38,14 +38,38 @@ export default function UserDashboard() {
   }, [searchParams]);
   const [statusFilter, setStatusFilter] = useState<'all' | 'confirmed' | 'pending' | 'past'>('all');
 
-  const [profileForm, setProfileForm] = useState({ name: '', phone: '' });
+  const [profileForm, setProfileForm] = useState({ 
+    name: '', 
+    phone: '', 
+    gender: '' as 'male' | 'female' | 'other' | 'prefer_not_to_say' | '',
+    age: '' as string,
+    address: {
+      street: '',
+      city: '',
+      state: '',
+      postal_code: '',
+      country: ''
+    }
+  });
   const { data: appointments = [], isLoading, refetch: refetchAppointments } = useUserAppointments(user?.id);
   const cancelMutation = useCancelAppointment();
   const updateProfileMutation = useUpdateProfile();
 
   useEffect(() => {
     if (profile) {
-      setProfileForm({ name: profile.name || '', phone: profile.phone || '' });
+      setProfileForm({ 
+        name: profile.name || '', 
+        phone: profile.phone || '',
+        gender: profile.gender || '',
+        age: profile.age?.toString() || '',
+        address: {
+          street: profile.address?.street || '',
+          city: profile.address?.city || '',
+          state: profile.address?.state || '',
+          postal_code: profile.address?.postal_code || '',
+          country: profile.address?.country || ''
+        }
+      });
     }
   }, [profile]);
 
@@ -53,9 +77,38 @@ export default function UserDashboard() {
 
   const saveProfile = () => {
     if (!profileForm.name.trim() || !user) return;
+    
+    const updateData: any = {
+      name: profileForm.name.trim(), 
+      phone: profileForm.phone.trim() || null,
+    };
+
+    // Add gender if provided
+    if (profileForm.gender) {
+      updateData.gender = profileForm.gender;
+    }
+
+    // Add age if provided and valid
+    if (profileForm.age.trim()) {
+      const ageNum = parseInt(profileForm.age.trim());
+      if (!isNaN(ageNum) && ageNum >= 0 && ageNum <= 150) {
+        updateData.age = ageNum;
+      }
+    }
+
+    // Add address if any field is provided
+    const hasAddressData = Object.values(profileForm.address).some(val => val.trim());
+    if (hasAddressData) {
+      updateData.address = Object.fromEntries(
+        Object.entries(profileForm.address)
+          .filter(([_, value]) => value.trim())
+          .map(([key, value]) => [key, value.trim()])
+      );
+    }
+
     updateProfileMutation.mutate({
       userId: user.id,
-      data: { name: profileForm.name.trim(), phone: profileForm.phone.trim() || null },
+      data: updateData,
     });
   };
 
@@ -157,35 +210,161 @@ export default function UserDashboard() {
             <div>
               <h1 className="text-[26px] sm:text-[30px] font-black text-slate-900 mb-6">Your Profile</h1>
               <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6 sm:p-8 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="text-[13px] font-extrabold text-slate-700 mb-2 block">Full Name</label>
-                    <div className="relative">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <input
-                        value={profileForm.name}
-                        onChange={e => setProfileForm({ ...profileForm, name: e.target.value })}
-                        className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-[14px] font-medium outline-none focus:border-primary transition-colors"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-[13px] font-extrabold text-slate-700 mb-2 block">Phone</label>
-                    <div className="relative">
-                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <input
-                        value={profileForm.phone}
-                        onChange={e => setProfileForm({ ...profileForm, phone: e.target.value })}
-                        className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-[14px] font-medium outline-none focus:border-primary transition-colors"
-                      />
-                    </div>
-                  </div>
-                </div>
+                
+                {/* Basic Information */}
                 <div>
-                  <label className="text-[13px] font-extrabold text-slate-700 mb-2 block">Email</label>
-                  <input value={user?.email || ''} disabled className="w-full px-4 py-3.5 bg-slate-100 border-2 border-slate-100 rounded-2xl text-[14px] font-medium text-slate-400 cursor-not-allowed" />
+                  <h2 className="text-[18px] font-black text-slate-900 mb-4">Basic Information</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="text-[13px] font-extrabold text-slate-700 mb-2 block">Full Name</label>
+                      <div className="relative">
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <input
+                          value={profileForm.name}
+                          onChange={e => setProfileForm({ ...profileForm, name: e.target.value })}
+                          className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-[14px] font-medium outline-none focus:border-primary transition-colors"
+                          placeholder="Enter your full name"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[13px] font-extrabold text-slate-700 mb-2 block">Phone</label>
+                      <div className="relative">
+                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <input
+                          value={profileForm.phone}
+                          onChange={e => setProfileForm({ ...profileForm, phone: e.target.value })}
+                          className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-[14px] font-medium outline-none focus:border-primary transition-colors"
+                          placeholder="Enter your phone number"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-6">
+                    <label className="text-[13px] font-extrabold text-slate-700 mb-2 block">Email</label>
+                    <input 
+                      value={user?.email || ''} 
+                      disabled 
+                      className="w-full px-4 py-3.5 bg-slate-100 border-2 border-slate-100 rounded-2xl text-[14px] font-medium text-slate-400 cursor-not-allowed" 
+                    />
+                  </div>
                 </div>
-                <button onClick={saveProfile} disabled={updateProfileMutation.isPending} className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-bold px-6 py-3 rounded-xl transition-colors disabled:opacity-70">
+
+                {/* Demographics */}
+                <div>
+                  <h2 className="text-[18px] font-black text-slate-900 mb-4">Demographics</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="text-[13px] font-extrabold text-slate-700 mb-2 block">Gender</label>
+                      <div className="relative">
+                        <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <select
+                          value={profileForm.gender}
+                          onChange={e => setProfileForm({ ...profileForm, gender: e.target.value as any })}
+                          className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-[14px] font-medium outline-none focus:border-primary transition-colors appearance-none"
+                        >
+                          <option value="">Select gender (optional)</option>
+                          <option value="male">Male</option>
+                          <option value="female">Female</option>
+                          <option value="other">Other</option>
+                          <option value="prefer_not_to_say">Prefer not to say</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[13px] font-extrabold text-slate-700 mb-2 block">Age</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="150"
+                        value={profileForm.age}
+                        onChange={e => setProfileForm({ ...profileForm, age: e.target.value })}
+                        className="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-[14px] font-medium outline-none focus:border-primary transition-colors"
+                        placeholder="Enter your age (optional)"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Address */}
+                <div>
+                  <h2 className="text-[18px] font-black text-slate-900 mb-4">Address</h2>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[13px] font-extrabold text-slate-700 mb-2 block">Street Address</label>
+                      <div className="relative">
+                        <MapPinIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <input
+                          value={profileForm.address.street}
+                          onChange={e => setProfileForm({ 
+                            ...profileForm, 
+                            address: { ...profileForm.address, street: e.target.value }
+                          })}
+                          className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-[14px] font-medium outline-none focus:border-primary transition-colors"
+                          placeholder="Enter street address (optional)"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[13px] font-extrabold text-slate-700 mb-2 block">City</label>
+                        <input
+                          value={profileForm.address.city}
+                          onChange={e => setProfileForm({ 
+                            ...profileForm, 
+                            address: { ...profileForm.address, city: e.target.value }
+                          })}
+                          className="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-[14px] font-medium outline-none focus:border-primary transition-colors"
+                          placeholder="Enter city (optional)"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[13px] font-extrabold text-slate-700 mb-2 block">State</label>
+                        <input
+                          value={profileForm.address.state}
+                          onChange={e => setProfileForm({ 
+                            ...profileForm, 
+                            address: { ...profileForm.address, state: e.target.value }
+                          })}
+                          className="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-[14px] font-medium outline-none focus:border-primary transition-colors"
+                          placeholder="Enter state (optional)"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[13px] font-extrabold text-slate-700 mb-2 block">Postal Code</label>
+                        <input
+                          value={profileForm.address.postal_code}
+                          onChange={e => setProfileForm({ 
+                            ...profileForm, 
+                            address: { ...profileForm.address, postal_code: e.target.value }
+                          })}
+                          className="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-[14px] font-medium outline-none focus:border-primary transition-colors"
+                          placeholder="Enter postal code (optional)"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[13px] font-extrabold text-slate-700 mb-2 block">Country</label>
+                        <input
+                          value={profileForm.address.country}
+                          onChange={e => setProfileForm({ 
+                            ...profileForm, 
+                            address: { ...profileForm.address, country: e.target.value }
+                          })}
+                          className="w-full px-4 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-[14px] font-medium outline-none focus:border-primary transition-colors"
+                          placeholder="Enter country (optional)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={saveProfile} 
+                  disabled={updateProfileMutation.isPending} 
+                  className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-bold px-6 py-3 rounded-xl transition-colors disabled:opacity-70"
+                >
                   {updateProfileMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                   Save Profile
                 </button>
