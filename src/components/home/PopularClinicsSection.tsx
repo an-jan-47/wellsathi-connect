@@ -3,6 +3,7 @@ import { getPopularClinics } from '@/services/clinicService';
 import type { Clinic } from '@/types';
 import { ClinicCard } from '@/components/clinic/ClinicCard';
 import { Sparkles } from 'lucide-react';
+import { ClinicCardSkeleton } from '@/components/common/SkeletonLoaders';
 
 export function PopularClinicsSection() {
   const [clinics, setClinics] = useState<Clinic[]>([]);
@@ -22,18 +23,41 @@ export function PopularClinicsSection() {
     fetchPopular();
   }, []);
 
-  if (loading || clinics.length === 0) {
-    return null; // or a skeleton if preferred, but null is fine for progressive enhancement
+  if (loading) {
+    return (
+      <section className="py-16 bg-white dark:bg-background">
+        <div className="container mx-auto">
+          <div className="flex items-center gap-2 mb-8 justify-center">
+            <Sparkles className="h-6 w-6 text-primary" />
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white text-center">Most Popular Clinics</h2>
+          </div>
+          <p className="text-slate-500 dark:text-slate-400 text-center mb-10 max-w-2xl mx-auto">
+            Discover top-rated healthcare facilities trusted by patients for their exceptional care and professional service.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            <ClinicCardSkeleton />
+            <ClinicCardSkeleton />
+            <ClinicCardSkeleton />
+            <ClinicCardSkeleton />
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (clinics.length === 0) {
+    return null;
   }
 
   return (
-    <section className="py-16 bg-white">
+    <section className="py-16 bg-white dark:bg-background">
       <div className="container mx-auto">
         <div className="flex items-center gap-2 mb-8 justify-center">
           <Sparkles className="h-6 w-6 text-primary" />
-          <h2 className="text-3xl font-bold text-slate-900 text-center">Most Popular Clinics</h2>
+          <h2 className="text-3xl font-bold text-slate-900 dark:text-white text-center">Most Popular Clinics</h2>
         </div>
-        <p className="text-slate-500 text-center mb-10 max-w-2xl mx-auto">
+        <p className="text-slate-500 dark:text-slate-400 text-center mb-10 max-w-2xl mx-auto">
           Discover top-rated healthcare facilities trusted by patients for their exceptional care and professional service.
         </p>
         

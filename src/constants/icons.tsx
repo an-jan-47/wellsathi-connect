@@ -16,7 +16,8 @@ import {
   Syringe,
   TestTube,
   Scan,
-  Cross
+  Cross,
+  Users
 } from 'lucide-react';
 import React from 'react';
 
@@ -28,7 +29,7 @@ export const SPECIALTY_ICONS: Record<string, React.ElementType> = {
   'Orthopedics': Bone,
   'ENT': Ear,
   'Ophthalmology': Eye,
-  'Gynecology': ActivitySquare,
+  'Gynecology': Users,
   'Neurology': Brain,
   'Psychiatry': Brain,
   'Dentistry': Smile,

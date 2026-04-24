@@ -4,6 +4,7 @@ import { MapPin, Star, Calendar, CheckCircle2, IndianRupee } from 'lucide-react'
 import type { Clinic } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { getSpecialtyIcon } from '@/constants/icons';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ClinicCardProps {
   clinic: Clinic;
@@ -142,11 +143,13 @@ export function ClinicCard({ clinic, layout = 'horizontal' }: ClinicCardProps) {
   const isVertical = layout === 'vertical';
   const isTopRated = (clinic.rating ?? 0) > 4;
   const hasRating = (clinic.rating ?? 0) > 0;
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   return (
     <Link
       to={`/clinic/${clinic.id}`}
-      className={`bg-white focus-visible:outline-none focus:ring-4 ring-primary/20 rounded-[24px] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] border border-slate-100/80 p-3 sm:p-4 hover:shadow-[0_12px_40px_-8px_rgba(0,0,0,0.08)] hover:border-slate-200/80 transition-all duration-300 group block ${isVertical ? 'h-full flex flex-col' : ''}`}
+      className={`bg-white dark:bg-card focus-visible:outline-none focus:ring-4 ring-primary/20 rounded-[24px] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] border border-slate-100/80 dark:border-border p-3 sm:p-4 hover:shadow-[0_12px_40px_-8px_rgba(0,0,0,0.08)] hover:border-slate-200/80 dark:hover:border-slate-700 transition-all duration-300 group block ${isVertical ? 'h-full flex flex-col' : ''}`}
     >
       <div
         className={`flex gap-3.5 sm:gap-5 ${
@@ -157,22 +160,27 @@ export function ClinicCard({ clinic, layout = 'horizontal' }: ClinicCardProps) {
       >
         {/* ─── Image ─── */}
         <div
-          className={`relative shrink-0 rounded-[16px] overflow-hidden bg-slate-100 ${
+          className={`relative shrink-0 rounded-[16px] overflow-hidden bg-slate-100 dark:bg-slate-800 ${
             isVertical
               ? 'w-full aspect-[16/10]'
               : 'w-full sm:w-[260px] h-[180px] sm:h-auto sm:min-h-[200px]'
           }`}
         >
-          {clinic.images && clinic.images.length > 0 ? (
+          {!imageLoaded && !imageError && clinic.images && clinic.images.length > 0 && (
+            <Skeleton className="absolute inset-0 w-full h-full" />
+          )}
+          {clinic.images && clinic.images.length > 0 && !imageError ? (
             <img
               src={clinic.images[0]}
               alt={clinic.name}
               loading="lazy"
               decoding="async"
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+              onLoad={() => setImageLoaded(true)}
+              onError={() => setImageError(true)}
+              className={`absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
             />
           ) : (
-            <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-primary/10 to-slate-100 flex items-center justify-center">
+            <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-primary/10 to-slate-100 dark:to-slate-800 flex items-center justify-center">
               <span className="text-4xl font-black text-primary/30">
                 {clinic.name.charAt(0)}
               </span>
@@ -202,7 +210,7 @@ export function ClinicCard({ clinic, layout = 'horizontal' }: ClinicCardProps) {
           <div>
             {/* Title row + Desktop badges */}
             <div className="flex items-start justify-between gap-2 mb-1.5">
-              <h3 className="font-black text-[18px] sm:text-[20px] text-slate-900 group-hover:text-primary transition-colors leading-tight line-clamp-2">
+              <h3 className="font-black text-[18px] sm:text-[20px] text-slate-900 dark:text-white group-hover:text-primary transition-colors leading-tight line-clamp-2">
                 {clinic.name}
               </h3>
               {/* Desktop badges — parallel to clinic name */}
@@ -213,7 +221,7 @@ export function ClinicCard({ clinic, layout = 'horizontal' }: ClinicCardProps) {
             </div>
 
             {/* Location */}
-            <div className="flex items-center gap-1.5 text-slate-500 mb-3">
+            <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 mb-3">
               <MapPin className="h-3.5 w-3.5 shrink-0 stroke-[2.5]" />
               <span className="text-[12px] sm:text-[13px] font-medium line-clamp-1">
                 {clinic.address}, {clinic.city}
@@ -228,7 +236,7 @@ export function ClinicCard({ clinic, layout = 'horizontal' }: ClinicCardProps) {
                   return (
                     <span
                       key={spec}
-                      className="flex items-center gap-1 px-2.5 py-1 bg-slate-50 border border-slate-200/60 rounded-full text-[11px] font-semibold text-slate-600"
+                      className="flex items-center gap-1 px-2.5 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-full text-[11px] font-semibold text-slate-600 dark:text-slate-300"
                     >
                       <Icon className="w-3 h-3 text-primary opacity-80" />
                       {spec}
@@ -236,7 +244,7 @@ export function ClinicCard({ clinic, layout = 'horizontal' }: ClinicCardProps) {
                   );
                 })}
                 {clinic.specializations.length > 3 && (
-                  <span className="px-2.5 py-1 bg-slate-50 border border-slate-200/60 rounded-full text-[11px] font-semibold text-slate-500">
+                  <span className="px-2.5 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-full text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                     +{clinic.specializations.length - 3}
                   </span>
                 )}
@@ -245,7 +253,7 @@ export function ClinicCard({ clinic, layout = 'horizontal' }: ClinicCardProps) {
           </div>
 
           {/* Bottom bar: Price + Slot + CTA */}
-          <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-100/80 mt-auto">
+          <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-100/80 dark:border-slate-800 mt-auto">
             {/* Left: fee + slot */}
             <div className="flex items-center gap-3 sm:gap-4 min-w-0">
               {/* Fee */}
@@ -254,7 +262,7 @@ export function ClinicCard({ clinic, layout = 'horizontal' }: ClinicCardProps) {
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5 leading-none">
                     From
                   </p>
-                  <p className="text-[16px] sm:text-[17px] font-black text-slate-900 leading-none">
+                  <p className="text-[16px] sm:text-[17px] font-black text-slate-900 dark:text-white leading-none">
                     ₹{clinic.fees}
                   </p>
                 </div>
@@ -262,7 +270,7 @@ export function ClinicCard({ clinic, layout = 'horizontal' }: ClinicCardProps) {
 
               {/* Divider */}
               {(clinic.fees ?? 0) > 0 && (
-                <div className="w-px h-7 bg-slate-100 shrink-0" />
+                <div className="w-px h-7 bg-slate-100 dark:bg-slate-800 shrink-0" />
               )}
 
               {/* Next slot */}
