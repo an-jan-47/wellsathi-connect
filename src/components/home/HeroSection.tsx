@@ -172,26 +172,26 @@ export function HeroSection() {
                   setLocation(e.target.value);
                   setShowLocationDropdown(true);
                 }}
-                className="w-full bg-transparent text-[15px] font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none h-full py-4"
+                className="w-full bg-transparent text-[15px] font-medium text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none h-full py-4"
               />
               {/* Location Dropdown */}
               {showLocationDropdown && (
-                <div className="relative md:absolute top-full left-0 mt-2 w-full bg-white rounded-xl shadow-xl border border-slate-100 max-h-[60vh] md:max-h-60 overflow-y-auto z-50 py-2">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 max-h-60 overflow-y-auto z-50 py-2">
                   <div
-                    className="flex items-center gap-2 px-4 py-3 hover:bg-slate-50 cursor-pointer text-primary text-sm font-medium border-b border-slate-50"
+                    className="flex items-center gap-2 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer text-primary text-sm font-medium border-b border-slate-50 dark:border-slate-700"
                     onClick={() => {
                       setGeolocationRequested(false);
                       handleGeolocation();
                     }}
                   >
-                    <Navigation className="h-4 w-4" />
+                    <Navigation className="h-4 w-4 shrink-0" />
                     Use my current location
                   </div>
                   {filteredCities.length > 0 ? (
                     filteredCities.map((city) => (
                       <div
                         key={city}
-                        className="px-4 py-2.5 hover:bg-slate-50 cursor-pointer text-slate-700 text-sm font-medium transition-colors"
+                        className="px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer text-slate-700 dark:text-slate-200 text-sm font-medium transition-colors"
                         onClick={() => {
                           setLocation(city);
                           setShowLocationDropdown(false);
@@ -201,7 +201,7 @@ export function HeroSection() {
                       </div>
                     ))
                   ) : (
-                    <div className="px-4 py-3 text-sm text-slate-400">
+                    <div className="px-4 py-3 text-sm text-slate-400 dark:text-slate-500">
                       No locations found.
                     </div>
                   )}
@@ -212,7 +212,7 @@ export function HeroSection() {
             {/* Specialty Input */}
             <div
               ref={specialtyRef}
-              className="relative flex-1 w-full flex items-center pr-4 rounded-xl md:rounded-none bg-slate-50 md:bg-transparent"
+              className="relative flex-1 w-full flex items-center pr-4 rounded-xl md:rounded-none bg-slate-50 dark:bg-slate-900 md:bg-transparent md:dark:bg-transparent"
             >
               <div className="pl-6 pr-2 py-4 flex items-center justify-center">
                 <Grid className="h-5 w-5 text-slate-400" />
@@ -225,31 +225,31 @@ export function HeroSection() {
                   setSpecialty(e.target.value);
                   setShowSpecialtyDropdown(true);
                 }}
-                className="w-full bg-transparent text-[15px] font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none h-full py-4"
+                className="w-full bg-transparent text-[15px] font-medium text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none h-full py-4"
               />
               {/* Specialty Dropdown */}
               {showSpecialtyDropdown && (
-                <div className="relative md:absolute top-full left-0 mt-2 w-full bg-white rounded-xl shadow-xl border border-slate-100 max-h-[60vh] md:max-h-60 overflow-y-auto z-50 py-2">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 max-h-60 overflow-y-auto z-50 py-2">
                   {filteredSpecialties.length > 0 ? (
                     filteredSpecialties.map((spec) => {
                       const Icon = getSpecialtyIcon(spec);
                       return (
                         <div
                           key={spec}
-                          className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-slate-50 cursor-pointer text-slate-700 text-sm font-medium transition-colors"
+                          className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer text-slate-700 dark:text-slate-200 text-sm font-medium transition-colors"
                           onClick={() => {
                             setSpecialty(spec);
                             setShowSpecialtyDropdown(false);
                             setTimeout(() => handleSearch(), 100);
                           }}
                         >
-                          <Icon className="w-4 h-4 text-primary opacity-70" />
+                          <Icon className="w-4 h-4 text-primary opacity-70 shrink-0" />
                           {spec}
                         </div>
                       );
                     })
                   ) : (
-                    <div className="px-4 py-3 text-sm text-slate-400">
+                    <div className="px-4 py-3 text-sm text-slate-400 dark:text-slate-500">
                       No specialties found.
                     </div>
                   )}
