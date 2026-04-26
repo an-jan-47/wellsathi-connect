@@ -60,7 +60,7 @@ export function StepClinicDetails({ data, userId, onNext, onBack }: Props) {
         <label className="text-[13px] font-extrabold text-slate-700 mb-1.5 block">Clinic Name</label>
         <div className="relative">
           <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-          <input id="clinicName" placeholder="Sunrise Medical Centre" className={inputCls(!!errors.clinicName)} {...register('clinicName')} />
+          <input id="clinicName" placeholder="Enter clinic name" className={inputCls(!!errors.clinicName)} {...register('clinicName')} />
         </div>
         {errors.clinicName && <p className="text-[12px] text-red-500 font-medium mt-1">{errors.clinicName.message}</p>}
       </div>
@@ -80,7 +80,7 @@ export function StepClinicDetails({ data, userId, onNext, onBack }: Props) {
         <label className="text-[13px] font-extrabold text-slate-700 mb-1.5 block">City</label>
         <div className="relative">
           <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-          <input id="city" placeholder="Mumbai" className={inputCls(!!errors.city)} {...register('city')} />
+          <input id="city" placeholder="Enter city" className={inputCls(!!errors.city)} {...register('city')} />
         </div>
         {errors.city && <p className="text-[12px] text-red-500 font-medium mt-1">{errors.city.message}</p>}
       </div>
@@ -90,7 +90,7 @@ export function StepClinicDetails({ data, userId, onNext, onBack }: Props) {
         <label className="text-[13px] font-extrabold text-slate-700 mb-1.5 block">Full Address</label>
         <div className="relative">
           <MapPin className="absolute left-4 top-4 h-4 w-4 text-slate-400 pointer-events-none" />
-          <textarea id="address" placeholder="123 Health Street, Andheri West…" className={textareaCls(!!errors.address)} {...register('address')} />
+          <textarea id="address" placeholder="Enter full address" className={textareaCls(!!errors.address)} {...register('address')} />
         </div>
         {errors.address && <p className="text-[12px] text-red-500 font-medium mt-1">{errors.address.message}</p>}
       </div>
@@ -100,7 +100,7 @@ export function StepClinicDetails({ data, userId, onNext, onBack }: Props) {
         <label className="text-[13px] font-extrabold text-slate-700 mb-1.5 block">Description <span className="font-medium text-slate-400">(Optional)</span></label>
         <div className="relative">
           <FileText className="absolute left-4 top-4 h-4 w-4 text-slate-400 pointer-events-none" />
-          <textarea id="description" placeholder="Tell patients about your clinic, specialities, and what makes you unique…" className={textareaCls()} {...register('description')} />
+          <textarea id="description" placeholder="Enter clinic description" className={textareaCls()} {...register('description')} />
         </div>
       </div>
 

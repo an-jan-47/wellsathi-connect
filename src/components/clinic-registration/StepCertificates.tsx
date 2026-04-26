@@ -40,7 +40,7 @@ export function StepCertificates({ data, userId, onNext, onBack }: Props) {
         <label className="text-[13px] font-extrabold text-slate-700 mb-1.5 block">Clinic Registration Number</label>
         <div className="relative">
           <Hash className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-          <input id="registrationNumber" placeholder="e.g., MH/MED/2024/12345"
+          <input id="registrationNumber" placeholder="Enter registration number"
             className={`w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 rounded-2xl text-[14px] font-medium outline-none transition-colors ${errors.registrationNumber ? 'border-red-300 focus:border-red-400' : 'border-slate-100 focus:border-primary'}`}
             {...register('registrationNumber')} />
         </div>

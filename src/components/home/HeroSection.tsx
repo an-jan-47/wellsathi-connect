@@ -121,7 +121,7 @@ export function HeroSection() {
   );
 
   return (
-    <section className="relative bg-background dark:bg-background pt-20 pb-16 md:pt-32 md:pb-24 min-h-[480px] md:min-h-[600px]">
+    <section className="relative bg-background dark:bg-background pt-20 pb-12 md:pt-32 md:pb-18 min-h-[480px] md:min-h-[600px]">
       {/* Subtle radial background matching the design */}
       <div className="absolute inset-0 top-0 w-full h-[600px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-100/50 via-white to-white dark:from-slate-800/30 dark:via-background dark:to-background pointer-events-none"></div>
 
@@ -147,6 +147,7 @@ export function HeroSection() {
           {/* Search Box */}
           <form
             onSubmit={handleSearch}
+            aria-label="Search for clinics"
             className="flex flex-col md:flex-row items-center max-w-[700px] mx-auto bg-white dark:bg-slate-800 rounded-2xl md:rounded-full p-2 shadow-[0_8px_30px_-10px_rgba(0,0,0,0.1)] border border-slate-100 dark:border-slate-700 animate-in slide-in-from-bottom-6 duration-700 delay-300 fill-mode-both relative z-20 hover:shadow-[0_12px_40px_-10px_rgba(0,0,0,0.12)] transition-shadow gap-2 md:gap-0"
           >
             {/* Location Input */}
@@ -162,6 +163,8 @@ export function HeroSection() {
                 )}
               </div>
               <input
+                id="location-search"
+                aria-label="Enter your city"
                 placeholder="Enter your city..."
                 value={location}
                 onFocus={() => {
@@ -176,7 +179,7 @@ export function HeroSection() {
               />
               {/* Location Dropdown */}
               {showLocationDropdown && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 max-h-60 overflow-y-auto z-50 py-2">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 max-h-60 overflow-y-auto custom-scrollbar z-50 py-2">
                   <div
                     className="flex items-center gap-2 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer text-primary text-sm font-medium border-b border-slate-50 dark:border-slate-700"
                     onClick={() => {
@@ -218,6 +221,8 @@ export function HeroSection() {
                 <Grid className="h-5 w-5 text-slate-400" />
               </div>
               <input
+                id="specialty-search"
+                aria-label="Specialty (optional)"
                 placeholder="Specialty (optional)"
                 value={specialty}
                 onFocus={() => setShowSpecialtyDropdown(true)}
@@ -229,7 +234,7 @@ export function HeroSection() {
               />
               {/* Specialty Dropdown */}
               {showSpecialtyDropdown && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 max-h-60 overflow-y-auto z-50 py-2">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 max-h-60 overflow-y-auto custom-scrollbar z-50 py-2">
                   {filteredSpecialties.length > 0 ? (
                     filteredSpecialties.map((spec) => {
                       const Icon = getSpecialtyIcon(spec);
@@ -259,35 +264,13 @@ export function HeroSection() {
 
             <button
               type="submit"
-              className="w-full md:w-auto mt-2 md:mt-0 bg-primary hover:bg-primary/90 text-white font-bold text-[15px] rounded-xl md:rounded-full px-8 py-4 flex items-center justify-center gap-2 transition-colors active:scale-95 shadow-md shadow-primary/20"
+              aria-label="Search clinics"
+              className="w-full md:w-auto mt-2 md:mt-0 bg-primary hover:bg-primary/90 text-white font-bold text-[15px] rounded-xl md:rounded-full px-8 py-4 flex items-center justify-center gap-2 transition-all duration-100 will-change-transform hover:scale-[1.02] active:scale-[0.98] shadow-md shadow-primary/20 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
             >
               <Search className="h-4 w-4 stroke-[3]" />
               Search
             </button>
           </form>
-
-          {/* Popular Links */}
-          <div className="mt-8 flex flex-wrap justify-center items-center gap-3 animate-in slide-in-from-bottom-4 duration-700 delay-500 fill-mode-both">
-            <span className="text-[12px] font-extrabold text-slate-400 uppercase tracking-widest">
-              Popular:
-            </span>
-            {['General Medicine', 'Dentist', 'Pediatrics', 'Cardiology'].map(
-              (spec, index) => (
-                <button
-                  key={spec}
-                  onClick={() =>
-                    navigate(`/search?specialty=${encodeURIComponent(spec)}`)
-                  }
-                  className="flex items-center gap-3 group"
-                >
-                  <span className="text-[13px] font-bold text-slate-600 group-hover:text-primary transition-colors">
-                    {spec}
-                  </span>
-                  {index < 3 && <span className="text-slate-300">•</span>}
-                </button>
-              )
-            )}
-          </div>
         </div>
       </div>
     </section>

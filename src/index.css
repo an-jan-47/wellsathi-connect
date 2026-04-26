@@ -173,6 +173,17 @@
 
   /* Global dark mode overrides */
   .dark {
+    /* Fix autofill white background in dark mode */
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus,
+    input:-webkit-autofill:active {
+      -webkit-box-shadow: 0 0 0 30px rgb(15 23 42) inset !important;
+      -webkit-text-fill-color: rgb(226 232 240) !important;
+      caret-color: rgb(226 232 240) !important;
+      transition: background-color 5000s ease-in-out 0s;
+    }
+    
     /* Override hardcoded white backgrounds */
     .bg-white {
       @apply bg-slate-900 border-slate-800;
@@ -345,6 +356,43 @@
 
   .shadow-glow {
     box-shadow: var(--shadow-glow);
+  }
+
+  /* Custom subtle scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(220 10% 80%);
+    border-radius: 3px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(220 10% 70%);
+  }
+
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(220 20% 30%);
+  }
+
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(220 20% 40%);
+  }
+
+  /* Firefox */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(220 10% 80%) transparent;
+  }
+
+  .dark .custom-scrollbar {
+    scrollbar-color: hsl(220 20% 30%) transparent;
   }
 }
 

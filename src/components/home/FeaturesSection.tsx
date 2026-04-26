@@ -20,7 +20,7 @@ const features = [
 
 export function FeaturesSection() {
   return (
-    <section className="py-24 bg-white">
+    <section id="why-wellsathi" className="py-24 bg-white">
       <div className="container max-w-[1000px]">
         <div className="text-center mb-16 animate-in slide-in-from-bottom-4 duration-700">
           <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-4">

@@ -125,7 +125,7 @@ export function RescheduleDialog({
         </div>
 
         {/* Scrollable content area */}
-        <div className="flex-1 overflow-y-auto overscroll-contain px-4 sm:px-5 py-4 sm:py-5 space-y-4 sm:space-y-5">
+        <div className="flex-1 overflow-y-auto custom-scrollbar overscroll-contain px-4 sm:px-5 py-4 sm:py-5 space-y-4 sm:space-y-5">
           {/* Current Appointment Info — compact */}
           <div className="flex items-center gap-3 p-3 bg-amber-50/80 rounded-xl border border-amber-100/80">
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
@@ -194,7 +194,7 @@ export function RescheduleDialog({
                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
               </div>
             ) : filteredSlots.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-[180px] sm:max-h-[200px] overflow-y-auto pr-0.5">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-[180px] sm:max-h-[200px] overflow-y-auto custom-scrollbar pr-0.5">
                 {filteredSlots.map((slot) => {
                   const isSelected = selectedTime === slot.start_time;
                   const isCurrentSlot =

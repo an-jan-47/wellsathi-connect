@@ -15,6 +15,22 @@ export function Header() {
   const { user, profile, hasRole, signOut } = useAuthStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+    e.preventDefault();
+    if (window.location.pathname !== '/') {
+      window.location.href = `/#${id}`;
+      return;
+    }
+    const element = document.getElementById(id);
+    if (element) {
+      const offset = 80; // Header height is 80px
+      const elementPosition = element.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - offset;
+      window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+    }
+    setMobileMenuOpen(false);
+  };
+
   return (
     <header className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800">
       <div className="container flex h-20 items-center justify-between">
@@ -31,7 +47,16 @@ export function Header() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-8">
-          <Link to="/search" className="text-[14.5px] font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+          <Link to="/" className="text-[14.5px] font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded-md px-1">
+            Home
+          </Link>
+          <a href="#specialties" onClick={(e) => scrollToSection(e, 'specialties')} className="text-[14.5px] font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded-md px-1 cursor-pointer">
+            Services
+          </a>
+          <a href="#why-wellsathi" onClick={(e) => scrollToSection(e, 'why-wellsathi')} className="text-[14.5px] font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded-md px-1 cursor-pointer">
+            About Us
+          </a>
+          <Link to="/search" className="text-[14.5px] font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none rounded-md px-1">
             Find Clinics
           </Link>
           
@@ -114,6 +139,27 @@ export function Header() {
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 absolute top-20 left-0 right-0 shadow-lg">
           <nav className="container py-6 flex flex-col gap-2">
+            <Link
+              to="/"
+              className="px-4 py-3 text-[15px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Home
+            </Link>
+            <a
+              href="#specialties"
+              className="px-4 py-3 text-[15px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+              onClick={(e) => scrollToSection(e, 'specialties')}
+            >
+              Services
+            </a>
+            <a
+              href="#why-wellsathi"
+              className="px-4 py-3 text-[15px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+              onClick={(e) => scrollToSection(e, 'why-wellsathi')}
+            >
+              About Us
+            </a>
             <Link
               to="/search"
               className="px-4 py-3 text-[15px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors"

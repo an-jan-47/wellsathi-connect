@@ -378,7 +378,7 @@ function BookingCard({
                 <ChevronDown className="w-4 h-4 text-slate-400 shrink-0 ml-2" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] rounded-xl shadow-xl border-slate-100 p-1.5 max-h-[260px] overflow-y-auto" align="start">
+            <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] rounded-xl shadow-xl border-slate-100 p-1.5 max-h-[260px] overflow-y-auto custom-scrollbar" align="start">
               {doctors.length === 0 && <div className="p-3 text-center text-sm font-medium text-slate-500">No doctors available</div>}
               {doctors.map((d) => (
                 <DropdownMenuItem
@@ -422,7 +422,7 @@ function BookingCard({
         <div className="mb-5 min-h-[120px]">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Available Slots</label>
           {filteredSlots.length > 0 ? (
-            <div className="grid grid-cols-3 sm:grid-cols-2 gap-2 max-h-[160px] overflow-y-auto">
+            <div className="grid grid-cols-3 sm:grid-cols-2 gap-2 max-h-[160px] overflow-y-auto custom-scrollbar">
               {filteredSlots.map((slot) => {
                 const isSelected = selectedSlot === slot.start_time;
                 if (!slot.is_available) return null;

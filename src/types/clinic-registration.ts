@@ -1,11 +1,16 @@
 import { z } from 'zod';
 
+import { validatePhoneNumber } from '@/components/ui/phone-input';
+import { validatePasswordStrength, getPasswordErrorMessage } from '@/components/ui/password-input';
+
+const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+
 // Step 1: User Account
 export const userAccountSchema = z.object({
   ownerName: z.string().min(2, 'Name must be at least 2 characters').max(100),
-  email: z.string().email('Invalid email address').max(255),
-  phone: z.string().min(10, 'Phone must be at least 10 digits').max(15),
-  password: z.string().min(8, 'Password must be at least 8 characters').max(72),
+  email: z.string().min(1, 'Please enter your email address').regex(emailRegex, 'Please enter a valid email address').max(255),
+  phone: z.string().min(1, 'Phone is required').refine(validatePhoneNumber, 'Invalid phone number for selected country'),
+  password: z.string().min(8, 'Password must be at least 8 characters').max(72).refine(validatePasswordStrength, getPasswordErrorMessage()),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",

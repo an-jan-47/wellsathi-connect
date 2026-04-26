@@ -113,7 +113,7 @@ export default function Search() {
                     </button>
                   </DropdownMenuTrigger>
                   
-                  <DropdownMenuContent className="w-80 max-h-[70vh] overflow-y-auto p-4 rounded-2xl shadow-2xl border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 mt-2" align="end">
+                  <DropdownMenuContent className="w-80 max-h-[70vh] overflow-y-auto custom-scrollbar p-4 rounded-2xl shadow-2xl border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 mt-2" align="end" onOpenAutoFocus={(e) => e.preventDefault()}>
                     <div className="space-y-4">
                       {/* Location */}
                       <div className="space-y-2">
@@ -125,7 +125,7 @@ export default function Search() {
                           >
                             Any Location
                           </button>
-                          {['Delhi', 'Mumbai', 'Bangalore', 'Pune', 'Chennai', 'Kolkata'].map(loc => (
+                          {['Delhi', 'New Delhi'].map(loc => (
                             <button 
                               key={loc} 
                               onClick={() => updateParams({ location: loc })} 
@@ -147,7 +147,7 @@ export default function Search() {
                           >
                             All
                           </button>
-                          {SPECIALIZATIONS.slice(0, 5).map(spec => (
+                          {SPECIALIZATIONS.slice(0, 12).map(spec => (
                             <button 
                               key={spec} 
                               onClick={() => updateParams({ specialty: spec })} 
@@ -257,13 +257,15 @@ export default function Search() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button 
-                    className="flex shrink-0 items-center gap-1.5 px-4 py-2.5 bg-primary/10 dark:bg-primary/20 text-primary border border-primary/20 hover:bg-primary/20 dark:hover:bg-primary/30 rounded-full text-sm font-bold transition-colors"
+                    className="flex shrink-0 items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 bg-primary/10 dark:bg-primary/20 text-primary border border-primary/20 hover:bg-primary/20 dark:hover:bg-primary/30 rounded-full text-xs sm:text-sm font-bold transition-colors"
                     aria-label="Select specialty"
                   >
-                    {filters.specialty || 'All Specialties'} <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span className="hidden sm:inline">{filters.specialty || 'All Specialties'}</span>
+                    <span className="sm:hidden">{filters.specialty || 'All'}</span>
+                    <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5" aria-hidden="true" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56 p-2 rounded-2xl shadow-xl border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 max-h-[400px] overflow-y-auto" align="start">
+                <DropdownMenuContent className="w-56 p-2 rounded-2xl shadow-xl border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 max-h-[400px] overflow-y-auto custom-scrollbar" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
                   <DropdownMenuItem 
                     onClick={() => updateParams({ specialty: '' })} 
                     className="font-bold text-sm rounded-xl cursor-pointer py-2 px-3 dark:text-slate-200"
@@ -293,15 +295,15 @@ export default function Search() {
                   <button 
                     key={spec} 
                     onClick={() => updateParams({ specialty: spec === filters.specialty ? '' : spec })}
-                    className={`flex shrink-0 items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold border transition-colors ${
+                    className={`flex shrink-0 items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 rounded-full text-xs sm:text-sm font-semibold border transition-colors ${
                       filters.specialty === spec 
                         ? 'bg-primary/10 dark:bg-primary/20 text-primary border-primary/20' 
                         : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
                     }`}
                     aria-label={`Filter by ${spec}`}
                   >
-                    <Icon className={`w-3.5 h-3.5 ${filters.specialty === spec ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`} aria-hidden="true" />
-                    {spec}
+                    <Icon className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${filters.specialty === spec ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`} aria-hidden="true" />
+                    <span className="whitespace-nowrap">{spec}</span>
                   </button>
                 );
               })}
@@ -310,17 +312,17 @@ export default function Search() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button 
-                    className={`flex shrink-0 items-center gap-1.5 px-4 py-2.5 border rounded-full text-sm font-semibold transition-colors ${
+                    className={`flex shrink-0 items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 border rounded-full text-xs sm:text-sm font-semibold transition-colors ${
                       filters.maxFees 
                         ? 'bg-primary/10 dark:bg-primary/20 text-primary border-primary/20' 
                         : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
                     }`}
                     aria-label="Filter by consultation fee"
                   >
-                    {filters.maxFees ? `Up to ₹${filters.maxFees}` : 'Fee'} <ChevronDown className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" aria-hidden="true" />
+                    {filters.maxFees ? `₹${filters.maxFees}` : 'Fee'} <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400 dark:text-slate-500" aria-hidden="true" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-48 p-2 rounded-2xl shadow-xl border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900" align="start">
+                <DropdownMenuContent className="w-48 p-2 rounded-2xl shadow-xl border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 custom-scrollbar" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
                   <DropdownMenuItem 
                     onClick={() => updateParams({ maxFees: '' })} 
                     className="font-bold text-sm rounded-xl cursor-pointer py-2 px-3 dark:text-slate-200"
@@ -343,17 +345,17 @@ export default function Search() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button 
-                    className={`flex shrink-0 items-center gap-1.5 px-4 py-2.5 border rounded-full text-sm font-semibold transition-colors ${
+                    className={`flex shrink-0 items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 border rounded-full text-xs sm:text-sm font-semibold transition-colors ${
                       filters.availability 
                         ? 'bg-primary/10 dark:bg-primary/20 text-primary border-primary/20' 
                         : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
                     }`}
                     aria-label="Filter by availability"
                   >
-                    {filters.availability || 'Availability'} <ChevronDown className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" aria-hidden="true" />
+                    <span className="whitespace-nowrap">{filters.availability || 'Availability'}</span> <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400 dark:text-slate-500" aria-hidden="true" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-48 p-2 rounded-2xl shadow-xl border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900" align="start">
+                <DropdownMenuContent className="w-48 p-2 rounded-2xl shadow-xl border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 custom-scrollbar" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
                   <DropdownMenuItem 
                     onClick={() => updateParams({ availability: '' })} 
                     className="font-bold text-sm rounded-xl cursor-pointer py-2 px-3 dark:text-slate-200"

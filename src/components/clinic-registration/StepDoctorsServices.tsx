@@ -20,7 +20,7 @@ function CustomSelect({ value, options, placeholder, onChange }: { value: string
         </button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
-        <DropdownMenu.Content className="z-50 min-w-[220px] bg-white rounded-2xl shadow-xl border border-slate-100 p-2 max-h-[260px] overflow-y-auto" sideOffset={6}>
+        <DropdownMenu.Content className="z-50 min-w-[220px] bg-white rounded-2xl shadow-xl border border-slate-100 p-2 max-h-[260px] overflow-y-auto custom-scrollbar" sideOffset={6}>
           {options.map(opt => (
             <DropdownMenu.Item key={opt} onSelect={() => onChange(opt)}
               className="px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl cursor-pointer hover:bg-primary/5 hover:text-primary outline-none data-[highlighted]:bg-primary/5 data-[highlighted]:text-primary">

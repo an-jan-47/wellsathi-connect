@@ -2,7 +2,8 @@ import { useEffect, lazy, Suspense } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useAuthStore } from '@/stores/authStore';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
@@ -28,17 +29,6 @@ const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const ClinicRegistration = lazy(() => import("./pages/ClinicRegistration"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000,   // 5 minutes before data is stale
-      gcTime: 15 * 60 * 1000,     // 15 minutes garbage collection
-      retry: 2,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
 
 function PageLoader() {
   return (

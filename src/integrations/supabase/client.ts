@@ -5,13 +5,134 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+/**
+ * Validates that the Supabase URL uses HTTPS protocol in production
+ * Requirements: 17.1, 17.2
+ */
+function validateSupabaseUrl(url: string): void {
+  if (!url) {
+    throw new Error('Supabase URL is not configured');
+  }
+
+  const isProduction = import.meta.env.PROD;
+  
+  // In production, enforce HTTPS protocol
+  if (isProduction && !url.startsWith('https://')) {
+    throw new Error(
+      'Security Error: HTTPS protocol is required for all API requests in production. ' +
+      'HTTP connections are not allowed to protect data in transit.'
+    );
+  }
+
+  // Validate URL format
+  try {
+    const parsedUrl = new URL(url);
+    
+    // Ensure it's a valid Supabase URL format
+    if (!parsedUrl.hostname.includes('supabase')) {
+      console.warn('Warning: URL does not appear to be a Supabase endpoint');
+    }
+  } catch (error) {
+    throw new Error(`Invalid Supabase URL format: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Validates SSL certificate by attempting to establish a secure connection
+ * Requirements: 17.3
+ * 
+ * Note: In browser environments, SSL certificate validation is handled by the browser itself.
+ * The browser will automatically reject connections with invalid certificates.
+ * This function validates the URL format and protocol to ensure secure communication.
+ */
+function validateSecureConnection(url: string): void {
+  // Browser automatically validates SSL certificates
+  // We ensure HTTPS is used, which triggers browser's built-in SSL validation
+  if (url.startsWith('https://')) {
+    // SSL certificate validation is handled by the browser's TLS implementation
+    // Invalid certificates will cause the browser to reject the connection
+    return;
+  }
+  
+  throw new Error('Secure connection validation failed: HTTPS protocol required');
+}
+
+// Validate Supabase configuration before creating client
+validateSupabaseUrl(SUPABASE_URL);
+validateSecureConnection(SUPABASE_URL);
+
+/**
+ * Custom storage adapter that uses sessionStorage instead of localStorage
+ * Requirements: 19.1, 19.2
+ * 
+ * Note: While httpOnly cookies are the most secure option for session management,
+ * Supabase client-side SDK requires a storage mechanism for session tokens.
+ * We use sessionStorage as a compromise:
+ * - More secure than localStorage (cleared when tab closes)
+ * - Allows Supabase SDK to function properly
+ * - Tokens are still accessible to JavaScript (limitation of client-side auth)
+ * 
+ * For production applications requiring maximum security, consider:
+ * - Server-side session management with httpOnly cookies
+ * - Supabase Auth with custom server-side token handling
+ */
+const sessionStorageAdapter = {
+  getItem: (key: string) => {
+    if (typeof window === 'undefined') return null;
+    return sessionStorage.getItem(key);
+  },
+  setItem: (key: string, value: string) => {
+    if (typeof window === 'undefined') return;
+    sessionStorage.setItem(key, value);
+  },
+  removeItem: (key: string) => {
+    if (typeof window === 'undefined') return;
+    sessionStorage.removeItem(key);
+  },
+};
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
+    storage: sessionStorageAdapter,
     persistSession: true,
     autoRefreshToken: true,
-  }
+    detectSessionInUrl: true,
+    flowType: 'pkce', // Use PKCE flow for enhanced security
+  },
+  global: {
+    headers: {
+      // Ensure secure headers are sent with all requests
+      'X-Client-Info': 'healthcare-platform-frontend',
+    },
+  },
 });
+
+/**
+ * Error handler for Supabase connection failures
+ * Requirements: 17.4
+ */
+export function handleSupabaseError(error: unknown): never {
+  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+  
+  // Check if it's a connection/SSL error
+  if (
+    errorMessage.includes('SSL') ||
+    errorMessage.includes('certificate') ||
+    errorMessage.includes('HTTPS') ||
+    errorMessage.includes('secure connection')
+  ) {
+    throw new Error(
+      'Security Error: Unable to establish a secure connection to the server. ' +
+      'Please check your internet connection and try again. ' +
+      'If the problem persists, contact support.'
+    );
+  }
+  
+  throw error;
+}
+
+// Export validation functions for testing
+export { validateSupabaseUrl, validateSecureConnection };

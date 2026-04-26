@@ -14,7 +14,7 @@ interface AuthState {
   initialize: () => Promise<() => void>;
   fetchUserData: (userId: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, name: string, phone?: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, name: string, phone?: string, redirectTo?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   updatePassword: (password: string) => Promise<{ error: Error | null }>;
@@ -98,15 +98,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return { error };
   },
 
-  signUp: async (email, password, name, phone) => {
+  signUp: async (email, password, name, phone, redirectTo) => {
     set({ isLoading: true });
-    const redirectUrl = `${window.location.origin}/`;
+    
+    const baseRedirect = redirectTo 
+      ? new URL(redirectTo, window.location.origin).toString() 
+      : `${window.location.origin}/`;
     
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: redirectUrl,
+        emailRedirectTo: baseRedirect,
         data: { name, phone },
       },
     });

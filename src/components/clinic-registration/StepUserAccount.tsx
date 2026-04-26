@@ -1,20 +1,22 @@
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { User, Mail, Phone, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { User, Mail, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { userAccountSchema, type UserAccountData } from '@/types/clinic-registration';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from '@/hooks/use-toast';
+import { PhoneInput } from '@/components/ui/phone-input';
+import { PasswordInput } from '@/components/ui/password-input';
 
 interface Props { data: Partial<UserAccountData>; onNext: (data: UserAccountData) => void; }
 
 /* ── Shared premium input wrapper ── */
-function Field({ label, icon: Icon, error, children }: { label: string; icon: React.ElementType; error?: string; children: React.ReactNode }) {
+function Field({ label, icon: Icon, error, children }: { label: string; icon?: React.ElementType; error?: string; children: React.ReactNode }) {
   return (
     <div>
       <label className="text-[13px] font-extrabold text-slate-700 mb-1.5 block">{label}</label>
-      <div className="relative">
-        <Icon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+      <div className="relative flex">
+        {Icon && <Icon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />}
         {children}
       </div>
       {error && <p className="text-[12px] text-red-500 font-medium mt-1">{error}</p>}
@@ -23,14 +25,13 @@ function Field({ label, icon: Icon, error, children }: { label: string; icon: Re
 }
 
 export function StepUserAccount({ data, onNext }: Props) {
-  const [showPw, setShowPw] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const { signInWithGoogle } = useAuthStore();
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<UserAccountData>({
+  const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm<UserAccountData>({
     resolver: zodResolver(userAccountSchema),
     defaultValues: { ownerName: data.ownerName || '', email: data.email || '', phone: data.phone || '', password: data.password || '', confirmPassword: '' },
+    mode: 'onTouched',
   });
 
   const handleGoogleSignIn = async () => {
@@ -42,8 +43,8 @@ export function StepUserAccount({ data, onNext }: Props) {
     }
   };
 
-  const inputCls = (hasError?: boolean) =>
-    `w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 rounded-2xl text-[14px] font-medium outline-none transition-colors ${hasError ? 'border-red-300 focus:border-red-400' : 'border-slate-100 focus:border-primary'}`;
+  const inputCls = (hasError?: boolean, hasIcon: boolean = true) =>
+    `w-full ${hasIcon ? 'pl-11' : 'px-4'} pr-4 py-3.5 bg-slate-50 border-2 rounded-2xl text-[14px] font-medium outline-none transition-colors ${hasError ? 'border-red-300 focus:border-red-400' : 'border-slate-100 focus:border-primary hover:border-slate-200'}`;
 
   return (
     <form onSubmit={handleSubmit(onNext)} className="space-y-5 animate-fade-in">
@@ -53,33 +54,59 @@ export function StepUserAccount({ data, onNext }: Props) {
       </div>
 
       <Field label="Full Name" icon={User} error={errors.ownerName?.message}>
-        <input id="ownerName" placeholder="Dr. John Smith" className={inputCls(!!errors.ownerName)} {...register('ownerName')} />
+        <input id="ownerName" placeholder="Enter your full name" className={inputCls(!!errors.ownerName)} {...register('ownerName')} />
       </Field>
 
       <Field label="Email Address" icon={Mail} error={errors.email?.message}>
-        <input id="email" type="email" placeholder="doctor@clinic.com" className={inputCls(!!errors.email)} {...register('email')} />
+        <input id="email" type="email" placeholder="Enter your email address" className={inputCls(!!errors.email)} {...register('email')} />
       </Field>
 
-      <Field label="Phone Number" icon={Phone} error={errors.phone?.message}>
-        <input id="phone" type="tel" placeholder="+91 9876543210" className={inputCls(!!errors.phone)} {...register('phone')} />
+      <Field label="Phone Number" error={errors.phone?.message}>
+        <Controller
+          name="phone"
+          control={control}
+          render={({ field, fieldState }) => (
+             <div className="w-full">
+               <PhoneInput
+                  {...field}
+                  error={undefined}
+                  className="bg-slate-50 border-2 border-slate-100 h-14 rounded-2xl"
+               />
+             </div>
+          )}
+        />
       </Field>
 
-      <Field label="Password" icon={Lock} error={errors.password?.message}>
-        <input id="password" type={showPw ? 'text' : 'password'} placeholder="Minimum 8 characters"
-          className={`${inputCls(!!errors.password)} pr-11`} {...register('password')} />
-        <button type="button" onClick={() => setShowPw(!showPw)}
-          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-          {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-        </button>
+      <Field label="Password" error={errors.password?.message}>
+        <Controller
+          name="password"
+          control={control}
+          render={({ field, fieldState }) => (
+            <PasswordInput
+              {...field}
+              placeholder="Enter your password"
+              showStrengthMeter={true}
+              error={undefined}
+              className="bg-slate-50 border-2 border-slate-100 h-14 rounded-2xl"
+            />
+          )}
+        />
       </Field>
 
-      <Field label="Confirm Password" icon={Lock} error={errors.confirmPassword?.message}>
-        <input id="confirmPassword" type={showConfirm ? 'text' : 'password'} placeholder="Re-enter your password"
-          className={`${inputCls(!!errors.confirmPassword)} pr-11`} {...register('confirmPassword')} />
-        <button type="button" onClick={() => setShowConfirm(!showConfirm)}
-          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-          {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-        </button>
+      <Field label="Confirm Password" error={errors.confirmPassword?.message}>
+        <Controller
+          name="confirmPassword"
+          control={control}
+          render={({ field, fieldState }) => (
+            <PasswordInput
+              {...field}
+              placeholder="Confirm your password"
+              showStrengthMeter={false}
+              error={undefined}
+              className="bg-slate-50 border-2 border-slate-100 h-14 rounded-2xl"
+            />
+          )}
+        />
       </Field>
 
       <button type="submit" disabled={isSubmitting || googleLoading}

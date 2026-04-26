@@ -60,7 +60,7 @@ export function ClinicBookingWidget({
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
-                  className="w-[var(--radix-dropdown-menu-trigger-width)] rounded-xl shadow-xl border-slate-100 p-1.5 max-h-[260px] overflow-y-auto"
+                  className="w-[var(--radix-dropdown-menu-trigger-width)] rounded-xl shadow-xl border-slate-100 p-1.5 max-h-[260px] overflow-y-auto custom-scrollbar"
                   align="start"
                 >
                   {doctors.length === 0 && (
@@ -123,7 +123,7 @@ export function ClinicBookingWidget({
             <div className="mb-5">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Available Slots</label>
               {filteredSlots.length > 0 ? (
-                <div className="grid grid-cols-3 sm:grid-cols-2 gap-2 max-h-[180px] overflow-y-auto pr-0.5">
+                <div className="grid grid-cols-3 sm:grid-cols-2 gap-2 max-h-[180px] overflow-y-auto custom-scrollbar pr-0.5">
                   {filteredSlots.map((slot) => {
                     const isSelected = selectedSlot === slot.start_time;
                     if (!slot.is_available) return null;
