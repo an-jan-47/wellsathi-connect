@@ -47,7 +47,7 @@ export function ClinicSlots({ clinicId }: { clinicId: string }) {
   };
 
   // Fetch Doctors
-  const { data: doctors = [], isLoading: loadingDoctors } = useQuery({
+  const { data: doctorsData, isLoading: loadingDoctors } = useQuery({
     queryKey: ['clinic-doctors', clinicId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -59,6 +59,8 @@ export function ClinicSlots({ clinicId }: { clinicId: string }) {
       return data;
     },
   });
+
+  const doctors = doctorsData || [];
 
   // Automatically select doctor from URL or default to first
   useEffect(() => {
@@ -75,7 +77,7 @@ export function ClinicSlots({ clinicId }: { clinicId: string }) {
   const selectedDoctor = useMemo(() => doctors.find(d => d.id === selectedDoctorId), [doctors, selectedDoctorId]);
 
   // Fetch Schedules for selected doctor
-  const { data: schedules = [], isLoading: loadingSchedules, refetch: refetchSchedules } = useQuery({
+  const { data: schedulesData, isLoading: loadingSchedules, refetch: refetchSchedules } = useQuery({
     queryKey: ['doctor-schedules', selectedDoctorId],
     queryFn: async () => {
       if (!selectedDoctorId) return [];
@@ -101,6 +103,8 @@ export function ClinicSlots({ clinicId }: { clinicId: string }) {
   const [exceptionReason, setExceptionReason] = useState('Holiday');
   const [isAddingException, setIsAddingException] = useState(false);
 
+  const schedules = schedulesData || [];
+
   const initializeForm = () => {
     const newFormState: Record<number, Partial<DoctorSchedule>> = {};
     let fallbackDuration = 15;
@@ -119,8 +123,10 @@ export function ClinicSlots({ clinicId }: { clinicId: string }) {
   };
 
   useEffect(() => {
-    initializeForm();
-  }, [schedules]);
+    if (schedulesData) {
+      initializeForm();
+    }
+  }, [schedulesData]);
 
   const updateDay = (day: number, field: keyof DoctorSchedule, value: string | number | boolean) => {
     setFormState(prev => ({
@@ -180,7 +186,7 @@ export function ClinicSlots({ clinicId }: { clinicId: string }) {
   };
 
   // Fetch Exceptions
-  const { data: exceptions = [], isLoading: loadingExceptions, refetch: refetchExceptions } = useQuery({
+  const { data: exceptionsData, isLoading: loadingExceptions, refetch: refetchExceptions } = useQuery({
     queryKey: ['doctor-exceptions', selectedDoctorId],
     queryFn: async () => {
       if (!selectedDoctorId) return [];
@@ -195,6 +201,8 @@ export function ClinicSlots({ clinicId }: { clinicId: string }) {
     },
     enabled: !!selectedDoctorId && activeTab === 'exceptions',
   });
+
+  const exceptions = exceptionsData || [];
 
   const handleAddException = async () => {
     if (!selectedDoctorId || !exceptionDate) return;

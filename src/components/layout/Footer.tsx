@@ -15,22 +15,21 @@ export function Footer() {
                <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-primary/10 group-hover:scale-105 transition-transform duration-300 p-1.5">
                  <img src="/favicon.ico" alt="WellSathi Logo" className="w-full h-full object-contain" />
                </div>
-               <span className="text-[20px] font-black text-slate-900 tracking-tight">
+               <span className="text-[20px] font-black text-slate-900 dark:text-white tracking-tight">
                  WellSathi
                </span>
             </Link>
             <p className="text-muted-foreground text-sm max-w-sm mb-4">
               Your trusted companion for finding the best healthcare. Book appointments with top clinics near you in seconds.
             </p>
-            <div className="flex gap-4 text-muted-foreground">
-              <a href="#" className="hover:text-primary transition-colors">
-                <MapPin className="h-5 w-5" />
+            <div className="space-y-2 text-sm text-muted-foreground mb-4">
+              <a href="mailto:support@wellsathi.in" className="flex items-center gap-2 hover:text-primary transition-colors">
+                <Mail className="h-4 w-4 flex-shrink-0" />
+                <span className="hidden md:inline">support@wellsathi.in</span>
               </a>
-              <a href="#" className="hover:text-primary transition-colors">
-                <Phone className="h-5 w-5" />
-              </a>
-              <a href="#" className="hover:text-primary transition-colors">
-                <Mail className="h-5 w-5" />
+              <a href="tel:+918434668180" className="flex items-center gap-2 hover:text-primary transition-colors">
+                <Phone className="h-4 w-4 flex-shrink-0" />
+                <span className="hidden md:inline">+91 8434668180</span>
               </a>
             </div>
           </div>

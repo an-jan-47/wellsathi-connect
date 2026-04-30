@@ -1,54 +1,87 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
+import { ClinicDashboardLayout } from '@/components/layout/ClinicDashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/authStore';
 import { useClinicByOwner } from '@/hooks/queries/useClinics';
-import { useClinicAppointments, useClinicUpcomingAppointments } from '@/hooks/queries/useAppointments';
+import { useClinicAppointments, useClinicUpcomingAppointments, useInfiniteClinicAppointments } from '@/hooks/queries/useAppointments';
 import {
   Calendar, Loader2, Building2, Users, Stethoscope, Clock, CalendarCheck,
 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { ClinicAppointments } from '@/components/clinic-dashboard/ClinicAppointments';
+import { ClinicOverviewStats } from '@/components/clinic-dashboard/ClinicOverviewStats';
 import { ClinicSlots } from '@/components/clinic-dashboard/ClinicSlots';
-import { ClinicProfileEditor } from '@/components/clinic-dashboard/ClinicProfileEditor';
+import { ClinicSettings } from '@/components/clinic-dashboard/ClinicSettings';
 import { ClinicDoctors } from '@/components/clinic-dashboard/ClinicDoctors';
 import { ClinicServices } from '@/components/clinic-dashboard/ClinicServices';
 import { ClinicAnalytics } from '@/components/clinic-dashboard/ClinicAnalytics';
+import { ClinicPatients } from '@/components/clinic-dashboard/ClinicPatients';
 import { ClinicReviews } from '@/components/clinic/ClinicReviews';
-import { StatCard } from '@/components/common/StatCard';
 
-type Tab = 'overview' | 'appointments' | 'slots' | 'doctors' | 'services' | 'analytics' | 'reviews' | 'profile';
+type Tab = 'overview' | 'appointments' | 'slots' | 'doctors' | 'services' | 'patients' | 'analytics' | 'reviews' | 'profile';
 
 export default function ClinicDashboard() {
   const navigate = useNavigate();
   const { user, hasRole, isLoading: authLoading, isInitialized } = useAuthStore();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [activeTab, setActiveTab] = useState<Tab>('overview');
+  const [appointmentViewMode, setAppointmentViewMode] = useState<'date' | 'upcoming' | 'past'>('date');
 
   const { data: clinic, isLoading, refetch: refetchClinic } = useClinicByOwner(user?.id);
-  const { data: appointments = [], refetch: refetchAppointments } = useClinicAppointments(clinic?.id, selectedDate);
+  const { data: dateAppointments = [], refetch: refetchAppointments } = useClinicAppointments(clinic?.id, selectedDate);
   const { data: allAppointments = [], refetch: refetchAllAppointments } = useClinicUpcomingAppointments(
     clinic?.id, format(new Date(), 'yyyy-MM-dd')
   );
+  
+  const { 
+    data: infiniteUpcoming, 
+    fetchNextPage: fetchNextUpcoming, 
+    hasNextPage: hasNextUpcoming, 
+    isFetchingNextPage: isFetchingNextUpcoming,
+    refetch: refetchUpcoming 
+  } = useInfiniteClinicAppointments(clinic?.id, 'upcoming');
+  
+  const { 
+    data: infinitePast, 
+    fetchNextPage: fetchNextPast, 
+    hasNextPage: hasNextPast, 
+    isFetchingNextPage: isFetchingNextPast,
+    refetch: refetchPast 
+  } = useInfiniteClinicAppointments(clinic?.id, 'past');
+
+  let activeAppointments = [];
+  let fetchNextPage = undefined;
+  let hasNextPage = false;
+  let isFetchingNextPage = false;
+  let handleUpdateAppointments = () => { refetchAppointments(); };
+
+  if (appointmentViewMode === 'date') {
+    activeAppointments = dateAppointments;
+    handleUpdateAppointments = () => { refetchAppointments(); refetchAllAppointments(); };
+  } else if (appointmentViewMode === 'upcoming') {
+    activeAppointments = infiniteUpcoming?.pages.flat() || [];
+    fetchNextPage = fetchNextUpcoming;
+    hasNextPage = hasNextUpcoming;
+    isFetchingNextPage = isFetchingNextUpcoming;
+    handleUpdateAppointments = () => { refetchUpcoming(); refetchAllAppointments(); };
+  } else if (appointmentViewMode === 'past') {
+    activeAppointments = infinitePast?.pages.flat() || [];
+    fetchNextPage = fetchNextPast;
+    hasNextPage = hasNextPast;
+    isFetchingNextPage = isFetchingNextPast;
+    handleUpdateAppointments = () => { refetchPast(); refetchAllAppointments(); };
+  }
 
   const dateOptions = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(new Date(), i);
     return { value: format(date, 'yyyy-MM-dd'), label: format(date, 'EEE, MMM d'), isToday: i === 0 };
   });
 
-  const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: 'overview', label: 'Overview', icon: <Building2 className="h-4 w-4" /> },
-    { id: 'appointments', label: 'Appointments', icon: <CalendarCheck className="h-4 w-4" /> },
-    { id: 'slots', label: 'Doctor Schedules', icon: <Clock className="h-4 w-4" /> },
-    { id: 'doctors', label: 'Doctors', icon: <Users className="h-4 w-4" /> },
-    { id: 'services', label: 'Services', icon: <Stethoscope className="h-4 w-4" /> },
-    { id: 'analytics', label: 'Analytics', icon: <Calendar className="h-4 w-4" /> },
-    { id: 'reviews', label: 'Reviews', icon: <Users className="h-4 w-4" /> },
-    { id: 'profile', label: 'Profile', icon: <Building2 className="h-4 w-4" /> },
-  ];
+
 
   if (authLoading || !isInitialized || isLoading) {
     return <Layout><div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></Layout>;
@@ -73,84 +106,36 @@ export default function ClinicDashboard() {
   const pendingCount = allAppointments.filter(a => a.status === 'pending').length;
 
   return (
-    <Layout>
-      <div className="gradient-hero py-6">
-        <div className="container">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-foreground">{clinic.name}</h1>
-              <p className="text-muted-foreground mt-1">Clinic Management Dashboard</p>
-            </div>
-            <Badge variant={clinic.is_approved ? 'success' : 'warning'} className="self-start">
-              {clinic.is_approved ? 'Approved' : 'Pending Approval'}
-            </Badge>
-          </div>
-        </div>
-      </div>
-
-      <div className="container py-6">
-        {/* Tabs */}
-        <div className="flex gap-1 mb-6 overflow-x-auto pb-2 border-b border-border custom-scrollbar">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all whitespace-nowrap ${
-                activeTab === tab.id
-                  ? 'bg-card text-primary border-b-2 border-primary -mb-px'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {tab.icon}
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-          {/* Date Selector for appointments */}
-          {(activeTab === 'appointments') && (
-          <div className="flex flex-wrap gap-2 mb-6">
-            {dateOptions.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => setSelectedDate(option.value)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  selectedDate === option.value
-                    ? 'gradient-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {option.isToday ? 'Today' : option.label}
-              </button>
-            ))}
-          </div>
-        )}
-
+    <ClinicDashboardLayout
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      clinic={clinic}
+      user={user}
+    >
+      <div className="space-y-6">
         {/* Overview Tab */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard icon={<CalendarCheck className="h-5 w-5" />} label="Today's Appointments" value={todayAppointments.length} color="primary" />
-              <StatCard icon={<Clock className="h-5 w-5" />} label="Pending Approval" value={pendingCount} color="warning" />
-              <StatCard icon={<Calendar className="h-5 w-5" />} label="Upcoming Total" value={allAppointments.length} color="info" />
-              <StatCard icon={<Building2 className="h-5 w-5" />} label="Consultation Fee" value={`₹${clinic.fees}`} color="success" />
-            </div>
+            <ClinicOverviewStats 
+              todaysCount={todayAppointments.length} 
+              pendingCount={pendingCount} 
+              upcomingCount={allAppointments.length} 
+              fees={clinic.fees} 
+            />
 
             {/* Today's appointments preview */}
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Today's Appointments</h2>
-                <Button variant="ghost" size="sm" onClick={() => setActiveTab('appointments')}>View All →</Button>
+              <div className="flex items-center justify-between mb-4 pl-1">
+                <div>
+                  <h2 className="text-[20px] font-black text-slate-900 dark:text-white tracking-tight">Today's Appointments</h2>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setActiveTab('appointments')} className="text-primary font-bold hover:bg-primary/5">View All →</Button>
               </div>
-              {todayAppointments.length === 0 ? (
-                <Card className="bg-muted/50">
-                  <CardContent className="py-8 text-center text-muted-foreground">
-                    No appointments today
-                  </CardContent>
-                </Card>
-              ) : (
-                <ClinicAppointments appointments={todayAppointments.slice(0, 5)} onUpdate={() => { refetchAppointments(); refetchAllAppointments(); }} />
-              )}
+              <ClinicAppointments 
+                clinicId={clinic.id} 
+                appointments={todayAppointments.slice(0, 5)} 
+                onUpdate={() => { refetchAppointments(); refetchAllAppointments(); }} 
+              />
             </div>
           </div>
         )}
@@ -158,10 +143,58 @@ export default function ClinicDashboard() {
         {/* Appointments Tab */}
         {activeTab === 'appointments' && (
           <div>
-            <h2 className="text-lg font-semibold mb-4">
-              Appointments — {format(new Date(selectedDate), 'MMMM d, yyyy')}
-            </h2>
-            <ClinicAppointments appointments={appointments} onUpdate={refetchAppointments} />
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pl-1">
+              <div>
+                <h2 className="text-[28px] sm:text-[32px] font-black text-slate-900 dark:text-white tracking-tight leading-tight">Appointments</h2>
+                <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium text-[15px]">Manage and review your upcoming patient consultations.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setAppointmentViewMode('upcoming')}
+                  className={`px-4 py-2 rounded-xl text-[13px] font-bold transition-all ${
+                    appointmentViewMode === 'upcoming'
+                      ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  All Upcoming
+                </button>
+                <button
+                  onClick={() => setAppointmentViewMode('past')}
+                  className={`px-4 py-2 rounded-xl text-[13px] font-bold transition-all ${
+                    appointmentViewMode === 'past'
+                      ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  Past
+                </button>
+                <div className="w-[1px] h-8 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+                {dateOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => { setSelectedDate(option.value); setAppointmentViewMode('date'); }}
+                    className={`px-4 py-2 rounded-xl text-[13px] font-bold transition-all ${
+                      appointmentViewMode === 'date' && selectedDate === option.value
+                        ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {option.isToday ? 'Today' : option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <ClinicAppointments 
+              clinicId={clinic.id} 
+              appointments={activeAppointments} 
+              onUpdate={handleUpdateAppointments} 
+              date={appointmentViewMode === 'date' ? selectedDate : undefined} 
+              onViewSchedule={() => setActiveTab('slots')}
+              fetchNextPage={fetchNextPage}
+              hasNextPage={hasNextPage}
+              isFetchingNextPage={isFetchingNextPage}
+            />
           </div>
         )}
 
@@ -175,7 +208,6 @@ export default function ClinicDashboard() {
           {/* Doctors Tab */}
         {activeTab === 'doctors' && (
           <div>
-            <h2 className="text-lg font-semibold mb-4">Manage Doctors</h2>
             <ClinicDoctors clinicId={clinic.id} />
           </div>
         )}
@@ -183,15 +215,13 @@ export default function ClinicDashboard() {
         {/* Services Tab */}
         {activeTab === 'services' && (
           <div>
-            <h2 className="text-lg font-semibold mb-4">Manage Services</h2>
-            <ClinicServices clinicId={clinic.id} />
+            <ClinicServices clinic={clinic} onUpdateClinic={() => refetchClinic()} />
           </div>
         )}
 
         {/* Analytics Tab */}
         {activeTab === 'analytics' && (
           <div>
-            <h2 className="text-lg font-semibold mb-4">Analytics & Insights</h2>
             <ClinicAnalytics clinicId={clinic.id} clinicFees={clinic.fees} clinicRating={clinic.rating} />
           </div>
         )}
@@ -199,16 +229,21 @@ export default function ClinicDashboard() {
         {/* Reviews Tab */}
         {activeTab === 'reviews' && (
           <div>
-            <h2 className="text-lg font-semibold mb-4">Patient Reviews</h2>
             <ClinicReviews clinicId={clinic.id} />
           </div>
         )}
 
         {/* Profile Tab */}
         {activeTab === 'profile' && (
-          <ClinicProfileEditor clinic={clinic} onUpdate={() => refetchClinic()} />
+          <ClinicSettings clinic={clinic} onUpdate={() => refetchClinic()} />
+        )}
+        {/* Patients Tab */}
+        {activeTab === 'patients' && (
+          <div>
+            <ClinicPatients clinicId={clinic.id} />
+          </div>
         )}
       </div>
-    </Layout>
+    </ClinicDashboardLayout>
   );
 }

@@ -1,7 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import {
   getUserAppointments, getClinicAppointments, getClinicUpcomingAppointments,
   cancelAppointment, bookAppointment, updateAppointmentStatus, rescheduleAppointment,
+  getClinicAppointmentsBatched,
 } from '@/services/appointmentService';
 import { toast } from 'sonner';
 
@@ -28,6 +29,19 @@ export function useClinicUpcomingAppointments(clinicId: string | undefined, from
   return useQuery({
     queryKey: ['appointments', 'clinic', clinicId, 'upcoming'],
     queryFn: () => getClinicUpcomingAppointments(clinicId!, fromDate),
+    enabled: !!clinicId,
+  });
+}
+
+/** Fetch clinic appointments using infinite scroll. */
+export function useInfiniteClinicAppointments(clinicId: string | undefined, type: 'upcoming' | 'past', limit = 20) {
+  return useInfiniteQuery({
+    queryKey: ['appointments', 'clinic', clinicId, type, 'infinite'],
+    queryFn: ({ pageParam = 0 }) => getClinicAppointmentsBatched(clinicId!, type, pageParam as number, limit),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.length === limit ? allPages.length : undefined;
+    },
     enabled: !!clinicId,
   });
 }

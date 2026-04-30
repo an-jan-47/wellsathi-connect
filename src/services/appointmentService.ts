@@ -182,3 +182,40 @@ export async function rescheduleAppointment(params: {
   if (error) throw error;
   return data as unknown as string;
 }
+
+/**
+ * Fetch clinic appointments in batches (lazy loading/infinite scroll).
+ */
+export async function getClinicAppointmentsBatched(
+  clinicId: string,
+  type: 'upcoming' | 'past',
+  pageParam: number,
+  limit: number
+): Promise<Appointment[]> {
+  const today = new Date().toISOString().split('T')[0];
+  const from = pageParam * limit;
+  const to = from + limit - 1;
+
+  let query = supabase
+    .from('appointments')
+    .select(`
+      *,
+      doctors ( id, name, specialization ),
+      booking_services (
+        fee,
+        clinic_services ( service_name )
+      )
+    `)
+    .eq('clinic_id', clinicId);
+
+  if (type === 'upcoming') {
+    query = query.gte('date', today).order('date', { ascending: true }).order('time', { ascending: true });
+  } else {
+    query = query.lt('date', today).order('date', { ascending: false }).order('time', { ascending: false });
+  }
+
+  const { data, error } = await query.range(from, to);
+
+  if (error) throw error;
+  return (data as Appointment[]) || [];
+}

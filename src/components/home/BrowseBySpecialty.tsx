@@ -60,8 +60,8 @@ const SpecialtyCard = React.memo(({ specialty }: { specialty: string }) => {
       aria-label={`Browse ${specialty} clinics`}
       className="group flex flex-col items-center justify-center p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md dark:shadow-none hover:border-primary/20 dark:hover:border-primary/30 transition-all duration-100 ease-out w-[calc((100vw-5rem)/3.5)] lg:w-[calc((100vw-10rem)/8.5)] h-[130px] flex-shrink-0 snap-center focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
     >
-      <div className="w-14 h-14 rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center mb-3 group-hover:bg-primary/10 transition-colors duration-100 ease-out">
-        <Icon className="w-7 h-7 text-slate-500 dark:text-slate-400 group-hover:text-primary transition-transform duration-100 ease-out will-change-transform group-hover:scale-110" />
+      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 dark:from-primary/30 dark:to-primary/20 flex items-center justify-center mb-3 group-hover:from-primary/30 group-hover:to-primary/20 dark:group-hover:from-primary/40 dark:group-hover:to-primary/30 transition-all duration-100 ease-out shadow-sm">
+        <Icon className="w-7 h-7 text-primary transition-transform duration-100 ease-out will-change-transform group-hover:scale-110" />
       </div>
       <span className="text-[13px] font-bold text-slate-700 dark:text-slate-300 text-center leading-tight group-hover:text-primary transition-colors duration-100">
         {specialty}
@@ -91,6 +91,13 @@ export function BrowseBySpecialty() {
     const timer = setTimeout(() => setIsLoading(false), 300);
     return () => clearTimeout(timer);
   }, []);
+
+  // Ensure scroll starts from the beginning on mount/reload
+  useEffect(() => {
+    if (scrollContainerRef.current && !isLoading) {
+      scrollContainerRef.current.scrollLeft = 0;
+    }
+  }, [isLoading]);
 
   const handleScroll = () => {
     if (scrollContainerRef.current) {

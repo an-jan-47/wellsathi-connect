@@ -100,21 +100,23 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
           color: rgb(226 232 240) !important; /* slate-200 */
         }
         
-        /* Responsive styles for mobile - CRITICAL */
+        /* Responsive styles for mobile - CRITICAL - FIX DOUBLE SCROLLBAR */
         @media (max-width: 640px) {
           .iti__dropdown-content {
             position: fixed !important;
             max-height: 60vh !important;
-            width: calc(100vw - 48px) !important; /* Reduced from 32px */
+            width: calc(100vw - 48px) !important;
             left: 24px !important;
             right: 24px !important;
             top: 50% !important;
             transform: translateY(-50%) !important;
             z-index: 9999 !important;
+            overflow: hidden !important; /* Remove outer scrollbar */
           }
           
           .iti__country-list {
             max-height: 60vh !important;
+            overflow-y: auto !important; /* Single scrollbar on inner list */
           }
           
           .iti__selected-flag {

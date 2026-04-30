@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { PhoneInput, validatePhoneNumber } from '@/components/ui/phone-input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuthStore } from '@/stores/authStore';
 import { useClinicProfile } from '@/hooks/queries/useClinics';
 import { useAllSlots } from '@/hooks/queries/useSlots';
@@ -24,9 +26,9 @@ import type { Doctor } from '@/types';
 /* ───────────── validation schemas ───────────── */
 const patientSchema = z.object({
   patientName: z.string().trim().min(2, 'Name must be at least 2 characters').max(100),
-  patientPhone: z.string().trim().regex(/^\+?[\d\s\-]{10,15}$/, 'Enter a valid phone number (10-15 chars, + and spaces allowed)'),
+  patientPhone: z.string().trim().refine(validatePhoneNumber, 'Enter a valid phone number'),
   patientEmail: z.string().trim().email('Enter a valid email address').or(z.literal('')),
-  age: z.string().optional(),
+  age: z.string().optional().refine((val) => !val || (parseInt(val) >= 0 && parseInt(val) <= 999), 'Age must be between 0 and 999'),
   gender: z.string().optional(),
   notes: z.string().max(500).optional(),
 });
@@ -444,11 +446,14 @@ export default function Book() {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-foreground mb-2 block">Phone Number *</label>
-                        <div className="relative">
-                          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input name="patientPhone" placeholder="10-digit number" value={formData.patientPhone} onChange={handleChange} className="pl-11" />
-                        </div>
-                        {errors.patientPhone && <p className="text-sm text-destructive mt-1">{errors.patientPhone}</p>}
+                        <PhoneInput
+                          value={formData.patientPhone}
+                          onChange={(value) => {
+                            setFormData({ ...formData, patientPhone: value });
+                            setErrors({ ...errors, patientPhone: '' });
+                          }}
+                          error={errors.patientPhone}
+                        />
                       </div>
                     </div>
                     <div>
@@ -462,22 +467,41 @@ export default function Book() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="text-sm font-medium text-foreground mb-2 block">Age (Optional)</label>
-                        <Input name="age" type="number" placeholder="Enter age" value={formData.age} onChange={handleChange} />
+                        <Input 
+                          name="age" 
+                          type="number" 
+                          placeholder="Enter age" 
+                          value={formData.age} 
+                          onChange={handleChange}
+                          maxLength={3}
+                          onInput={(e) => {
+                            const target = e.target as HTMLInputElement;
+                            if (target.value.length > 3) {
+                              target.value = target.value.slice(0, 3);
+                            }
+                          }}
+                        />
+                        {errors.age && <p className="text-sm text-destructive mt-1">{errors.age}</p>}
                       </div>
                       <div>
                         <label className="text-sm font-medium text-foreground mb-2 block">Gender (Optional)</label>
-                        <select
-                          name="gender"
+                        <Select
                           value={formData.gender}
-                          onChange={handleChange}
-                          className="w-full h-10 px-3 py-2 bg-background border border-input rounded-md text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          onValueChange={(value) => {
+                            setFormData({ ...formData, gender: value });
+                            setErrors({ ...errors, gender: '' });
+                          }}
                         >
-                          <option value="">Select gender</option>
-                          <option value="male">Male</option>
-                          <option value="female">Female</option>
-                          <option value="other">Other</option>
-                          <option value="prefer-not-to-say">Prefer not to say</option>
-                        </select>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="male">Male</SelectItem>
+                            <SelectItem value="female">Female</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                            <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                     <div>

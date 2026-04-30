@@ -13,6 +13,14 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import type { SortOption } from '@/constants';
 import { ClinicCardSkeleton } from '@/components/common/SkeletonLoaders';
 
+// Top most popular specialties for quick filters
+const TOP_QUICK_FILTER_SPECIALTIES = [
+  'General Medicine',
+  'Dentistry',
+  'Cardiology',
+  'Dermatology',
+];
+
 export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -289,7 +297,7 @@ export default function Search() {
               </DropdownMenu>
 
               {/* Quick Select Specialty Filters */}
-              {SPECIALIZATIONS.slice(0, 4).map(spec => {
+              {TOP_QUICK_FILTER_SPECIALTIES.map(spec => {
                 const Icon = getSpecialtyIcon(spec);
                 return (
                   <button 
